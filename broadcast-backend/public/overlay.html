@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Broadcast Overlay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --pitch:#0B3D2E; --panel:#12181A; --panel-alpha:rgba(18,24,26,0.94);
+    --white:#FFFFFF; --gold:#D4AF37; --line:rgba(255,255,255,0.14);
+    --home-color:#1F5FAE; --away-color:#B3232E;
+    --display:'Barlow Condensed', sans-serif; --body:'Inter', sans-serif;
+  }
+  html,body{margin:0;padding:0;background:transparent;width:1920px;height:1080px;overflow:hidden;font-family:var(--body);}
+  .scene{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .35s ease;}
+  .scene.active{opacity:1;}
+
+  /* ---------- SCOREBUG ---------- */
+  #scene-scorebug .stage{
+    position:absolute;bottom:48px;left:50%;transform:translateX(-50%);
+    display:flex;align-items:stretch;filter:drop-shadow(0 8px 24px rgba(0,0,0,0.45));
+  }
+  .team{position:relative;display:flex;align-items:center;gap:14px;background:var(--panel-alpha);padding:10px 28px;}
+  /* Top two points are pulled up into negative territory (a plain rectangular
+     cap, no extra slant) purely so the score-flash pop-up isn't cropped by
+     this clip-path — the visible 0%-100% region and its diagonal edge are
+     untouched. */
+  .team.home{clip-path:polygon(0 -80px,100% -80px,100% 0,92% 100%,0 100%);padding-right:44px;}
+  .team.away{clip-path:polygon(8% -80px,100% -80px,100% 100%,0 100%,8% 0);padding-left:44px;}
+  .team .stripe{position:absolute;top:0;bottom:0;width:8px;}
+  .team.home .stripe{left:0;background:var(--home-color);}
+  .team.away .stripe{right:0;background:var(--away-color);}
+  .crest-sm{width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,0.08);
+    display:flex;align-items:center;justify-content:center;font-family:var(--display);
+    font-weight:800;font-size:22px;color:var(--white);border:2px solid var(--line);flex-shrink:0;overflow:hidden;}
+  .team.home .crest-sm{background:var(--home-color);} .team.away .crest-sm{background:var(--away-color);}
+  .name-wrap{display:flex;align-items:center;gap:8px;}
+  .name-sm{font-family:var(--display);font-weight:700;font-size:30px;letter-spacing:0.5px;
+    color:var(--white);text-transform:uppercase;white-space:nowrap;}
+  .serve-dot{width:10px;height:10px;border-radius:50%;background:var(--gold);display:none;flex-shrink:0;}
+  .serve-dot.show{display:block;}
+  .score-stack{position:relative;display:flex;flex-direction:column;align-items:center;}
+  .score-sm{font-family:var(--display);font-weight:800;font-size:44px;color:var(--white);min-width:56px;text-align:center;}
+  .score-sm.flash{animation:pop .5s ease;}
+  .score-flash{position:absolute;top:-38px;left:50%;transform:translateX(-50%) scale(0.6);opacity:0;
+    font-family:var(--display);font-weight:800;font-size:26px;color:var(--gold);
+    text-shadow:0 2px 8px rgba(0,0,0,0.6);pointer-events:none;white-space:nowrap;}
+  .score-flash.show{animation:rise 1.6s ease forwards;}
+  .sub-stat{font-family:var(--body);font-weight:600;font-size:12px;color:rgba(255,255,255,0.6);
+    letter-spacing:1px;text-transform:uppercase;margin-top:-4px;display:none;}
+  .sub-stat.show{display:block;}
+  @keyframes pop{0%{transform:scale(1);color:var(--gold);}40%{transform:scale(1.35);color:var(--gold);}100%{transform:scale(1);color:var(--white);}}
+  .center-sm{background:var(--pitch);display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:6px 26px;position:relative;z-index:2;min-width:140px;}
+  .center-sm::before{content:"";position:absolute;left:50%;top:8px;bottom:8px;width:1px;background:var(--line);transform:translateX(-50%);}
+  .clock-sm{font-family:var(--display);font-weight:700;font-size:24px;color:var(--white);letter-spacing:1px;display:none;}
+  .clock-sm.show{display:block;}
+  .period-sm{font-family:var(--body);font-weight:600;font-size:12px;color:rgba(255,255,255,0.65);
+    text-transform:uppercase;letter-spacing:2px;margin-top:2px;}
+  .extra-sm{font-family:var(--body);font-weight:600;font-size:12px;color:var(--gold);
+    text-transform:uppercase;letter-spacing:1px;margin-top:4px;display:none;}
+  .extra-sm.show{display:block;}
+  .mini-diamond{position:relative;width:80px;height:80px;margin:8px 0 2px;display:none;}
+  .mini-diamond.show{display:block;}
+  .mini-diamond .mbase{position:absolute;width:22px;height:22px;border-radius:3px;border:1px solid var(--line);
+    background:rgba(255,255,255,0.14);transform:rotate(45deg);}
+  .mini-diamond .mbase.on{background:var(--gold);border-color:var(--gold);}
+  .mini-diamond .mbase.second{top:0;left:50%;margin-left:-11px;}
+  .mini-diamond .mbase.first{top:50%;right:4px;margin-top:-11px;}
+  .mini-diamond .mbase.third{top:50%;left:4px;margin-top:-11px;}
+  @keyframes rise{0%{opacity:0;transform:translateX(-50%) translateY(10px) scale(0.6);}
+    20%{opacity:1;transform:translateX(-50%) translateY(-10px) scale(1);}
+    75%{opacity:1;transform:translateX(-50%) translateY(-10px) scale(1);}
+    100%{opacity:0;transform:translateX(-50%) translateY(-26px) scale(0.9);}}
+
+  /* ---------- SHARED CARD (matchup / halftime / break) ---------- */
+  .card{position:absolute;top:50%;left:50%;transform:translate(-50%,-46%) scale(0.96);
+    background:var(--panel-alpha);border:1px solid var(--line);
+    display:flex;flex-direction:column;align-items:center;
+    transition:opacity .5s ease, transform .5s ease;
+    filter:drop-shadow(0 20px 50px rgba(0,0,0,0.5));}
+  .scene.active .card{transform:translate(-50%,-50%) scale(1);}
+
+  #scene-matchup .card{width:1180px;padding:52px 60px 44px;}
+  .eyebrow{font-family:var(--display);font-weight:700;font-size:20px;letter-spacing:6px;
+    color:var(--gold);text-transform:uppercase;margin-bottom:6px;}
+  .event-line{font-family:var(--body);font-weight:600;font-size:16px;color:rgba(255,255,255,0.6);
+    letter-spacing:2px;text-transform:uppercase;margin-bottom:36px;}
+  .row{display:flex;align-items:center;justify-content:center;gap:56px;width:100%;}
+  .side{display:flex;flex-direction:column;align-items:center;width:340px;}
+  .crest-lg{width:120px;height:120px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-family:var(--display);font-weight:800;font-size:48px;color:var(--white);
+    border:3px solid var(--line);margin-bottom:18px;overflow:hidden;}
+  .side.home .crest-lg{background:var(--home-color);} .side.away .crest-lg{background:var(--away-color);}
+  .team-name-lg{font-family:var(--display);font-weight:800;font-size:42px;color:var(--white);
+    text-transform:uppercase;letter-spacing:1px;text-align:center;}
+  .record{font-family:var(--body);font-weight:600;font-size:15px;color:rgba(255,255,255,0.55);
+    letter-spacing:1px;margin-top:6px;}
+  .vs{font-family:var(--display);font-weight:700;font-size:34px;color:var(--white);
+    position:relative;width:64px;height:64px;display:flex;align-items:center;justify-content:center;}
+  .vs::before,.vs::after{content:"";position:absolute;width:1px;height:70px;background:var(--line);}
+  .vs::before{left:0;} .vs::after{right:0;}
+  .kickoff{margin-top:40px;font-family:var(--display);font-weight:700;font-size:22px;
+    color:var(--white);letter-spacing:2px;text-transform:uppercase;
+    border-top:1px solid var(--line);padding-top:22px;width:100%;text-align:center;}
+  .kickoff span{color:var(--gold);}
+
+  #scene-halftime .card{width:900px;padding:44px 50px 40px;}
+  .title-lg{font-family:var(--display);font-weight:800;font-size:52px;color:var(--white);letter-spacing:6px;text-transform:uppercase;}
+  .sub{font-family:var(--body);font-weight:600;font-size:15px;color:rgba(255,255,255,0.55);
+    letter-spacing:2px;text-transform:uppercase;margin-top:8px;margin-bottom:34px;}
+  .score-row{display:flex;align-items:center;justify-content:center;gap:44px;width:100%;}
+  .side-sm{display:flex;flex-direction:column;align-items:center;width:260px;}
+  .crest-md{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-family:var(--display);font-weight:800;font-size:32px;color:var(--white);border:2px solid var(--line);margin-bottom:12px;overflow:hidden;}
+  .side-sm.home .crest-md{background:var(--home-color);} .side-sm.away .crest-md{background:var(--away-color);}
+  .team-name-md{font-family:var(--display);font-weight:700;font-size:24px;color:var(--white);text-transform:uppercase;letter-spacing:1px;}
+  .score-lg{font-family:var(--display);font-weight:800;font-size:56px;color:var(--white);margin-top:6px;}
+  .dash{font-family:var(--display);font-weight:700;font-size:40px;color:rgba(255,255,255,0.35);}
+  .back-in{margin-top:36px;font-family:var(--body);font-weight:600;font-size:14px;letter-spacing:2px;
+    color:rgba(255,255,255,0.55);text-transform:uppercase;}
+  .timer{font-family:var(--display);font-weight:800;font-size:34px;color:var(--gold);margin-top:6px;}
+
+  #scene-break .card{width:1000px;padding:52px 60px 44px;}
+  .label-sm{font-family:var(--display);font-weight:700;font-size:18px;letter-spacing:6px;
+    color:var(--gold);text-transform:uppercase;margin-bottom:10px;}
+  .title-md{font-family:var(--display);font-weight:800;font-size:46px;color:var(--white);
+    letter-spacing:2px;text-transform:uppercase;margin-bottom:34px;}
+  .content{display:flex;align-items:center;gap:48px;width:100%;
+    border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:30px 0;}
+  .sponsor-name{font-family:var(--display);font-weight:800;font-size:38px;color:var(--white);flex:1;}
+  .sponsor-tag{font-family:var(--body);font-weight:500;font-size:15px;color:rgba(255,255,255,0.6);margin-top:6px;}
+  .qr{width:150px;height:150px;background:var(--white);flex-shrink:0;display:flex;align-items:center;justify-content:center;
+    font-family:var(--body);font-size:11px;color:#888;text-align:center;padding:8px;box-sizing:border-box;}
+  .footer{margin-top:26px;font-family:var(--body);font-weight:600;font-size:14px;letter-spacing:2px;
+    color:rgba(255,255,255,0.5);text-transform:uppercase;}
+
+  /* connection indicator — tiny, corner, only matters to the operator watching a preview */
+  #conn{position:absolute;top:16px;left:16px;font-family:var(--body);font-size:12px;
+    color:rgba(255,255,255,0.4);letter-spacing:1px;}
+  #conn.live{color:#4CD97B;}
+  #conn.down{color:#D95757;}
+</style>
+</head>
+<body>
+  <div id="conn">connecting…</div>
+
+  <div class="scene" id="scene-scorebug">
+    <div class="stage">
+      <div class="team home">
+        <div class="stripe"></div>
+        <div class="crest-sm" id="homeCrest">H</div>
+        <div class="name-wrap"><div class="serve-dot" id="homeServe"></div><div class="name-sm" id="homeName">HOME</div></div>
+        <div class="score-stack">
+          <div class="score-flash" id="homeFlash"></div>
+          <div class="score-sm" id="homeScore">0</div>
+          <div class="sub-stat" id="homeSubStat"></div>
+        </div>
+      </div>
+      <div class="center-sm">
+        <div class="clock-sm" id="clock">00:00</div>
+        <div class="period-sm" id="period">1ST HALF</div>
+        <div class="mini-diamond" id="miniDiamond">
+          <div class="mbase second" id="mbSecond"></div>
+          <div class="mbase first" id="mbFirst"></div>
+          <div class="mbase third" id="mbThird"></div>
+        </div>
+        <div class="extra-sm" id="extra"></div>
+      </div>
+      <div class="team away">
+        <div class="score-stack">
+          <div class="score-flash" id="awayFlash"></div>
+          <div class="score-sm" id="awayScore">0</div>
+          <div class="sub-stat" id="awaySubStat"></div>
+        </div>
+        <div class="name-wrap"><div class="name-sm" id="awayName">AWAY</div><div class="serve-dot" id="awayServe"></div></div>
+        <div class="crest-sm" id="awayCrest">A</div>
+        <div class="stripe"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="scene" id="scene-matchup">
+    <div class="card">
+      <div class="eyebrow" id="league">SRV CONFERENCE</div>
+      <div class="event-line" id="event">Regular Season</div>
+      <div class="row">
+        <div class="side home">
+          <div class="crest-lg" id="mHomeCrest">H</div>
+          <div class="team-name-lg" id="mHomeName">HOME</div>
+          <div class="record" id="homeRecord">0-0</div>
+        </div>
+        <div class="vs">VS</div>
+        <div class="side away">
+          <div class="crest-lg" id="mAwayCrest">A</div>
+          <div class="team-name-lg" id="mAwayName">AWAY</div>
+          <div class="record" id="awayRecord">0-0</div>
+        </div>
+      </div>
+      <div class="kickoff"><span id="kickoffLabel">Kickoff</span> <span id="kickoffTime">7:00 PM</span></div>
+    </div>
+  </div>
+
+  <div class="scene" id="scene-halftime">
+    <div class="card">
+      <div class="title-lg" id="htTitle">Halftime</div>
+      <div class="sub" id="htEvent">Match Title</div>
+      <div class="score-row">
+        <div class="side-sm home">
+          <div class="crest-md" id="htHomeCrest">H</div>
+          <div class="team-name-md" id="htHomeName">HOME</div>
+          <div class="score-lg" id="htHomeScore">0</div>
+        </div>
+        <div class="dash">–</div>
+        <div class="side-sm away">
+          <div class="crest-md" id="htAwayCrest">A</div>
+          <div class="team-name-md" id="htAwayName">AWAY</div>
+          <div class="score-lg" id="htAwayScore">0</div>
+        </div>
+      </div>
+      <div class="back-in">Back in</div>
+      <div class="timer" id="timer">15:00</div>
+    </div>
+  </div>
+
+  <div class="scene" id="scene-break">
+    <div class="card">
+      <div class="label-sm" id="tag">BREAK</div>
+      <div class="title-md" id="breakTitle">We'll Be Right Back</div>
+      <div class="content">
+        <div>
+          <div class="sponsor-name" id="sponsorName">Sponsor Name</div>
+          <div class="sponsor-tag" id="sponsorTag">Thanks for supporting local sports</div>
+        </div>
+        <img class="qr" id="qrImg" style="display:none;object-fit:contain;" />
+        <div class="qr" id="qrPlaceholder">QR CODE</div>
+      </div>
+      <div class="footer" id="footer">LIVE COVERAGE</div>
+    </div>
+  </div>
+
+<script>
+  const SCENES = ['scorebug','matchup','halftime','break'];
+  const KICKOFF_LABELS = { soccer:'Kickoff', basketball:'Tip-off', volleyball:'First Serve', baseball:'First Pitch', softball:'First Pitch' };
+  const HALFTIME_TITLES = { soccer:'Halftime', basketball:'Halftime', volleyball:'Set Break', baseball:'Inning Break', softball:'Inning Break' };
+
+  function applyTeamColors(s){
+    document.documentElement.style.setProperty('--home-color', s.homeColor);
+    document.documentElement.style.setProperty('--away-color', s.awayColor);
+  }
+
+  function setMode(mode){
+    SCENES.forEach(name => {
+      document.getElementById('scene-' + name).classList.toggle('active', name === mode);
+    });
+  }
+
+  function setCrest(el, logoUrl, initial){
+    el.textContent = '';
+    if(logoUrl){
+      const img = document.createElement('img');
+      img.src = logoUrl;
+      img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+      el.appendChild(img);
+    } else {
+      el.textContent = initial;
+    }
+  }
+
+  function ordinal(n){
+    const rem10 = n % 10, rem100 = n % 100;
+    if(rem10 === 1 && rem100 !== 11) return n + 'st';
+    if(rem10 === 2 && rem100 !== 12) return n + 'nd';
+    if(rem10 === 3 && rem100 !== 13) return n + 'rd';
+    return n + 'th';
+  }
+
+  function periodLabel(s){
+    switch(s.sport){
+      case 'basketball': return s.quarter;
+      case 'volleyball': return 'SET ' + s.volleyballSet;
+      case 'baseball':
+      case 'softball': return s.inningHalf.toUpperCase() + ' ' + ordinal(s.inning).toUpperCase();
+      default: return s.half.toUpperCase();
+    }
+  }
+
+  function render(s){
+    applyTeamColors(s);
+    setMode(s.mode);
+
+    document.getElementById('homeName').textContent = s.home;
+    document.getElementById('awayName').textContent = s.away;
+    setCrest(document.getElementById('homeCrest'), s.homeLogo, s.home.slice(0,1));
+    setCrest(document.getElementById('awayCrest'), s.awayLogo, s.away.slice(0,1));
+    document.getElementById('homeScore').textContent = s.homeScore;
+    document.getElementById('awayScore').textContent = s.awayScore;
+    document.getElementById('period').textContent = periodLabel(s);
+
+    // Clock only means something for soccer/basketball
+    const showClock = s.sport === 'soccer' || s.sport === 'basketball';
+    document.getElementById('clock').classList.toggle('show', showClock);
+
+    // Sport-specific sub-stats on the scorebug
+    const homeSub = document.getElementById('homeSubStat');
+    const awaySub = document.getElementById('awaySubStat');
+    const extra = document.getElementById('extra');
+    homeSub.classList.remove('show'); awaySub.classList.remove('show');
+    extra.classList.remove('show');
+    document.getElementById('homeServe').classList.remove('show');
+    document.getElementById('awayServe').classList.remove('show');
+    document.getElementById('miniDiamond').classList.remove('show');
+
+    if(s.sport === 'basketball'){
+      homeSub.textContent = s.fouls.home + ' PF';
+      awaySub.textContent = s.fouls.away + ' PF';
+      homeSub.classList.add('show'); awaySub.classList.add('show');
+      extra.textContent = 'TO ' + s.timeouts.home + '-' + s.timeouts.away;
+      extra.classList.add('show');
+    } else if(s.sport === 'volleyball'){
+      extra.textContent = 'SETS ' + s.setsWon.home + '-' + s.setsWon.away;
+      extra.classList.add('show');
+      document.getElementById('homeServe').classList.toggle('show', s.servingSide === 'home');
+      document.getElementById('awayServe').classList.toggle('show', s.servingSide === 'away');
+    } else if(s.sport === 'baseball' || s.sport === 'softball'){
+      document.getElementById('miniDiamond').classList.add('show');
+      document.getElementById('mbFirst').classList.toggle('on', s.bases.first);
+      document.getElementById('mbSecond').classList.toggle('on', s.bases.second);
+      document.getElementById('mbThird').classList.toggle('on', s.bases.third);
+      extra.textContent = s.balls + '-' + s.strikes + ', ' + s.outs + (s.outs === 1 ? ' OUT' : ' OUTS');
+      extra.classList.add('show');
+    }
+
+    document.getElementById('league').textContent = s.league.toUpperCase();
+    document.getElementById('event').textContent = s.event;
+    document.getElementById('mHomeName').textContent = s.home;
+    document.getElementById('mAwayName').textContent = s.away;
+    setCrest(document.getElementById('mHomeCrest'), s.homeLogo, s.home.slice(0,1));
+    setCrest(document.getElementById('mAwayCrest'), s.awayLogo, s.away.slice(0,1));
+    document.getElementById('homeRecord').textContent = s.homeRecord;
+    document.getElementById('awayRecord').textContent = s.awayRecord;
+    document.getElementById('kickoffLabel').textContent = KICKOFF_LABELS[s.sport];
+    document.getElementById('kickoffTime').textContent = s.kickoff;
+
+    document.getElementById('htTitle').textContent = HALFTIME_TITLES[s.sport];
+    document.getElementById('htEvent').textContent = s.event;
+    document.getElementById('htHomeName').textContent = s.home;
+    document.getElementById('htAwayName').textContent = s.away;
+    setCrest(document.getElementById('htHomeCrest'), s.homeLogo, s.home.slice(0,1));
+    setCrest(document.getElementById('htAwayCrest'), s.awayLogo, s.away.slice(0,1));
+    document.getElementById('htHomeScore').textContent = s.homeScore;
+    document.getElementById('htAwayScore').textContent = s.awayScore;
+
+    const labels = { timeout: 'TIMEOUT', brb: 'BREAK', sponsor: 'SPONSOR' };
+    document.getElementById('tag').textContent = labels[s.breakMode] || 'BREAK';
+    document.getElementById('breakTitle').textContent = s.breakTitle;
+    document.getElementById('sponsorName').textContent = s.sponsor;
+    document.getElementById('sponsorTag').textContent = s.sponsorTag;
+    document.getElementById('footer').textContent = s.footer;
+    if(s.qr){
+      document.getElementById('qrImg').src = s.qr;
+      document.getElementById('qrImg').style.display = 'block';
+      document.getElementById('qrPlaceholder').style.display = 'none';
+    } else {
+      document.getElementById('qrImg').style.display = 'none';
+      document.getElementById('qrPlaceholder').style.display = 'flex';
+    }
+
+    renderClock(s);
+    renderTimer(s);
+    applyScorebugLayout(s.scorebugLayout || { x: 0, y: 0, scale: 1 });
+  }
+
+  function applyScorebugLayout(layout){
+    document.querySelector('#scene-scorebug .stage').style.transform =
+      `translateX(-50%) translate(${layout.x}px, ${layout.y}px) scale(${layout.scale})`;
+  }
+
+  function fmtClock(totalSeconds){
+    const sec = Math.max(0, Math.round(totalSeconds));
+    const m = Math.floor(sec/60), s2 = sec%60;
+    return `${m}:${s2.toString().padStart(2,'0')}`;
+  }
+
+  function currentClockSeconds(s){
+    if(!s.clockRunning || s.clockAnchorMs == null) return s.clockSeconds;
+    const elapsed = (Date.now() - s.clockAnchorMs) / 1000;
+    const value = s.clockDirection === 'down' ? s.clockSeconds - elapsed : s.clockSeconds + elapsed;
+    return Math.max(0, value);
+  }
+
+  function renderClock(s){
+    document.getElementById('clock').textContent = fmtClock(currentClockSeconds(s));
+  }
+
+  function renderTimer(s){
+    if(!s.halftimeEndsAt){ document.getElementById('timer').textContent = '0:00'; return; }
+    const remaining = Math.max(0, Math.round((s.halftimeEndsAt - Date.now()) / 1000));
+    const m = Math.floor(remaining/60), sec = remaining%60;
+    document.getElementById('timer').textContent = `${m}:${sec.toString().padStart(2,'0')}`;
+  }
+
+  function flashGoal(side, delta){
+    const el = document.getElementById(side + 'Score');
+    el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+    const sport = latestState ? latestState.sport : 'soccer';
+    const g = document.getElementById(side + 'Flash');
+    g.textContent = sport === 'soccer' ? 'GOAL' : ('+' + delta);
+    g.classList.remove('show'); void g.offsetWidth; g.classList.add('show');
+  }
+
+  let latestState = null;
+  setInterval(() => { if(latestState){ renderTimer(latestState); renderClock(latestState); } }, 250);
+
+  // ---- WebSocket connection to the shared backend ----
+  function connect(){
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(`${proto}//${location.host}`);
+    const conn = document.getElementById('conn');
+
+    ws.onopen = () => { conn.textContent = 'live'; conn.className = 'live'; };
+    ws.onclose = () => { conn.textContent = 'reconnecting…'; conn.className = 'down'; setTimeout(connect, 1500); };
+    ws.onerror = () => ws.close();
+
+    ws.onmessage = (msg) => {
+      const data = JSON.parse(msg.data);
+      if(data.type === 'STATE'){ latestState = data.state; render(data.state); }
+      if(data.type === 'EVENT' && data.event.type === 'SCORE'){ flashGoal(data.event.side, data.event.delta); }
+    };
+  }
+  connect();
+</script>
+</body>
+</html>

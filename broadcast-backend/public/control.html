@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Broadcast Control</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0E1214; --panel:#171D20; --panel-2:#1E2529; --line:rgba(255,255,255,0.10);
+    --white:#F5F6F7; --dim:rgba(245,246,247,0.55); --gold:#D4AF37;
+    --home-color:#1F5FAE; --away-color:#B3232E;
+    --green:#3CA35A; --red:#C24343;
+    --display:'Barlow Condensed', sans-serif; --body:'Inter', sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--white);font-family:var(--body);
+    -webkit-tap-highlight-color:transparent;}
+  body{padding:env(safe-area-inset-top) 14px calc(env(safe-area-inset-bottom) + 24px);
+    max-width:520px;margin:0 auto;}
+  @media (min-width:720px){
+    body{max-width:1180px;padding-left:28px;padding-right:28px;}
+  }
+  @media (min-width:1300px){
+    body{max-width:1560px;}
+  }
+  @media (min-width:1760px){
+    body{max-width:1760px;}
+  }
+
+  /* ---- Tablet/desktop: a real 2-column dashboard ----
+     Score/clock anchor column 1; the sport's quick stats move to the TOP of
+     column 2 (not buried at the bottom of column 1), with settings sinking
+     below them — so both columns show their most-touched controls without
+     scrolling, instead of column 2 sitting mostly empty. `#dashColA`/
+     `#dashColB` are independent flex columns (JS moves the real elements
+     into them at this breakpoint — see bottom of <script>) rather than a
+     single CSS Grid, because a shared grid ties row heights across both
+     columns and produces huge dead gaps when one column has far fewer,
+     taller items than the other. Below 720px the JS moves everything back
+     into plain document order, so mobile is untouched. */
+  .layout-grid{display:block;}
+  @media (min-width:720px){
+    .layout-grid{display:grid;grid-template-columns:1fr 1.15fr;gap:0 28px;align-items:start;}
+    .dash-col{display:flex;flex-direction:column;gap:14px;}
+    .dash-col > *{margin-bottom:0;}
+    details{position:static;}
+  }
+
+  header{position:sticky;top:0;background:var(--bg);z-index:10;
+    padding:16px 4px 12px;display:flex;align-items:center;justify-content:space-between;
+    border-bottom:1px solid var(--line);margin-bottom:16px;}
+  h1{font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:0.5px;margin:0;}
+  #conn{font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;
+    padding:5px 10px;border-radius:20px;background:var(--panel-2);color:var(--dim);}
+  #conn.live{color:var(--green);}
+  #conn.down{color:var(--red);}
+
+  section{margin-bottom:22px;}
+  .section-label{font-family:var(--display);font-weight:700;font-size:14px;letter-spacing:2px;
+    color:var(--dim);text-transform:uppercase;margin:0 0 10px 2px;}
+
+  .sport-tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:20px;}
+  .sport-tab{height:52px;border:1px solid var(--line);background:var(--panel);
+    color:var(--dim);font-family:var(--display);font-weight:700;font-size:12px;letter-spacing:0.5px;
+    text-transform:uppercase;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;}
+  .sport-tab .icon{font-size:18px;line-height:1;}
+  .sport-tab.active{background:var(--gold);color:#1a1400;border-color:var(--gold);}
+
+  .mode-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+  .mode-btn{grid-column:span 1;height:56px;border:1px solid var(--line);background:var(--panel);
+    color:var(--white);font-family:var(--display);font-weight:700;font-size:16px;letter-spacing:1px;
+    text-transform:uppercase;border-radius:10px;display:flex;align-items:center;justify-content:center;
+    transition:background .15s ease, border-color .15s ease;}
+  .mode-btn.off{grid-column:span 3;}
+  .mode-btn.active{background:var(--gold);color:#1a1400;border-color:var(--gold);}
+
+  .score-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .score-card .team-tag{display:flex;align-items:center;gap:10px;}
+  .swatch{width:14px;height:14px;border-radius:3px;flex-shrink:0;}
+  .score-card .team-tag span{font-family:var(--display);font-weight:700;font-size:19px;
+    text-transform:uppercase;letter-spacing:0.5px;}
+  .score-controls{display:flex;align-items:center;gap:14px;}
+  .score-btn{width:48px;height:48px;border-radius:10px;border:1px solid var(--line);
+    background:var(--panel-2);color:var(--white);font-family:var(--display);font-weight:800;
+    font-size:24px;display:flex;align-items:center;justify-content:center;}
+  .score-btn.minus{color:var(--dim);}
+  .score-val{font-family:var(--display);font-weight:800;font-size:32px;min-width:36px;text-align:center;}
+  .bonus-row{gap:8px;margin:-2px 0 10px;padding-left:2px;}
+  .bonus-btn{flex:1;height:38px;border-radius:8px;border:1px solid var(--line);background:var(--panel-2);
+    color:var(--dim);font-family:var(--display);font-weight:700;font-size:14px;}
+  .score-pair, .pair-grid{display:block;}
+  @media (min-width:1300px){
+    .score-pair{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  }
+  @media (min-width:720px){
+    .pair-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  }
+
+  .reset-btn{width:100%;height:44px;border-radius:10px;border:1px solid var(--line);
+    background:transparent;color:var(--dim);font-family:var(--body);font-weight:600;font-size:13px;
+    letter-spacing:1px;text-transform:uppercase;margin-top:2px;}
+
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+  .field{display:flex;flex-direction:column;gap:6px;}
+  .field label{font-size:12px;color:var(--dim);letter-spacing:0.5px;}
+  input[type=text], input[type=time], input[type=url], select{
+    background:var(--panel-2);border:1px solid var(--line);border-radius:8px;color:var(--white);
+    padding:10px 12px;font-family:var(--body);font-size:15px;height:44px;width:100%;}
+  /* ---- Team color: preview + hex field + tap-to-pick palette ----
+     A native <input type=color> was tried here, but its OS-level picker
+     renders as a blurry pixelated wheel on this machine (a display-scaling
+     quirk outside the page's control), so color entry is fully custom. */
+  .color-row{display:flex;gap:8px;}
+  .color-preview{width:44px;height:44px;border-radius:8px;border:1px solid var(--line);flex-shrink:0;}
+  .color-row input{flex:1;text-transform:uppercase;}
+  .palette-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+  .palette-swatch{width:30px;height:30px;border-radius:6px;border:1px solid var(--line);padding:0;cursor:pointer;}
+  .palette-swatch.selected{border:2px solid var(--white);}
+
+  .preset-row{display:flex;gap:8px;margin-bottom:10px;}
+  .preset-btn{flex:1;height:46px;border-radius:10px;border:1px solid var(--line);background:var(--panel);
+    color:var(--white);font-family:var(--display);font-weight:700;font-size:15px;}
+  .preset-btn.active{background:var(--gold);color:#1a1400;border-color:var(--gold);}
+
+  .apply-btn{width:100%;height:48px;border-radius:10px;border:none;background:var(--gold);
+    color:#1a1400;font-family:var(--display);font-weight:800;font-size:16px;letter-spacing:1px;
+    text-transform:uppercase;margin-top:12px;}
+
+  details{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:0;margin-bottom:14px;overflow:hidden;}
+  summary{padding:14px 16px;font-family:var(--display);font-weight:700;font-size:16px;
+    letter-spacing:1px;text-transform:uppercase;cursor:pointer;list-style:none;
+    display:flex;align-items:center;justify-content:space-between;}
+  summary::-webkit-details-marker{display:none;}
+  summary::after{content:"▸";color:var(--dim);transition:transform .15s ease;}
+  details[open] summary::after{transform:rotate(90deg);}
+  .details-body{padding:4px 16px 18px;display:flex;flex-direction:column;gap:12px;}
+
+  .half-row{display:flex;gap:8px;}
+
+  /* ---- Game clock ---- */
+  .clock-display{font-family:var(--display);font-weight:800;font-size:52px;letter-spacing:2px;
+    text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:14px 0;margin-bottom:12px;}
+  .clock-display.running{color:var(--gold);}
+  .clock-btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;}
+  .clock-btn{height:48px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);
+    color:var(--white);font-family:var(--display);font-weight:700;font-size:15px;letter-spacing:1px;
+    text-transform:uppercase;}
+  .clock-btn.start{background:var(--green);color:#08210f;border-color:var(--green);}
+  .clock-btn.pause{background:var(--red);color:#2a0808;border-color:var(--red);}
+  .clock-btn.dir.active{background:var(--gold);color:#1a1400;border-color:var(--gold);}
+  @media (min-width:720px){
+    .clock-btn-row{grid-template-columns:repeat(4,1fr);}
+  }
+
+  /* ---- Stat cards (fouls / timeouts / sets won) ---- */
+  .stat-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:14px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .stat-label{font-family:var(--display);font-weight:700;font-size:15px;letter-spacing:0.5px;text-transform:uppercase;}
+  .stat-controls{display:flex;align-items:center;gap:12px;}
+  .stat-btn{width:40px;height:40px;border-radius:8px;border:1px solid var(--line);
+    background:var(--panel-2);color:var(--white);font-family:var(--display);font-weight:800;
+    font-size:20px;display:flex;align-items:center;justify-content:center;}
+  .stat-val{font-family:var(--display);font-weight:800;font-size:24px;min-width:26px;text-align:center;}
+
+  .serve-row{display:flex;gap:8px;margin-bottom:10px;}
+  .serve-btn{flex:1;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--panel);
+    color:var(--dim);font-family:var(--body);font-weight:600;font-size:13px;letter-spacing:0.5px;text-transform:uppercase;}
+  .serve-btn.active{background:var(--gold);color:#1a1400;border-color:var(--gold);}
+
+  .inning-row{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:12px;}
+  .inning-num{font-family:var(--display);font-weight:800;font-size:36px;min-width:70px;text-align:center;}
+  .half-toggle{height:44px;padding:0 18px;border-radius:10px;border:1px solid var(--line);
+    background:var(--panel-2);color:var(--white);font-family:var(--display);font-weight:700;font-size:15px;
+    text-transform:uppercase;}
+
+  /* ---- Baserunner diamond ---- */
+  .diamond-wrap{display:flex;justify-content:center;margin-bottom:6px;}
+  .diamond{position:relative;width:150px;height:150px;}
+  .diamond .base{position:absolute;width:38px;height:38px;border-radius:6px;border:2px solid var(--line);
+    background:var(--panel-2);transform:rotate(45deg);padding:0;cursor:pointer;}
+  .diamond .base.on{background:var(--gold);border-color:var(--gold);}
+  .diamond .base.second{top:0;left:50%;margin-left:-19px;}
+  .diamond .base.first{top:50%;right:6px;margin-top:-19px;}
+  .diamond .base.third{top:50%;left:6px;margin-top:-19px;}
+  .diamond .home-plate{position:absolute;bottom:0;left:50%;margin-left:-15px;width:30px;height:30px;
+    border-radius:5px;border:2px solid var(--line);background:var(--panel-2);transform:rotate(45deg);}
+
+  /* ---- Scorebug layout editor ----
+     A live iframe of the real overlay page (so the preview shows actual team
+     names/colors/scene), scaled down to fit. Dragging happens on a plain div
+     "proxy" layered on top — not the iframe content itself — and nothing is
+     sent to the server until Save, so edits never touch the on-air overlay
+     until the operator explicitly commits them. */
+  .layout-editor-wrap{position:relative;width:100%;aspect-ratio:16/9;background:#000;
+    border-radius:10px;overflow:hidden;border:1px solid var(--line);}
+  .layout-preview-frame{position:absolute;top:0;left:0;width:1920px;height:1080px;
+    border:0;pointer-events:none;transform-origin:top left;}
+  .layout-proxy{position:absolute;border:2px dashed var(--gold);box-sizing:border-box;
+    background:rgba(212,175,55,0.10);cursor:move;touch-action:none;}
+  .layout-proxy-handle{position:absolute;right:-10px;bottom:-10px;width:20px;height:20px;
+    border-radius:50%;background:var(--gold);border:2px solid #1a1400;cursor:nwse-resize;touch-action:none;}
+  .layout-readout{text-align:center;font-family:var(--display);font-weight:700;font-size:14px;
+    color:var(--dim);letter-spacing:1px;margin:10px 0 0;}
+
+  /* Instagram-style center snap guides — shown only while the drag is
+     actively snapped to dead-center on that axis. */
+  .layout-guide-v{position:absolute;top:0;bottom:0;left:50%;width:0;
+    border-left:2px dashed rgba(255,255,255,0.9);display:none;pointer-events:none;z-index:5;}
+  .layout-guide-v.show{display:block;}
+  .layout-guide-h{position:absolute;left:0;right:0;top:50%;height:0;
+    border-top:2px dashed rgba(255,255,255,0.9);display:none;pointer-events:none;z-index:5;}
+  .layout-guide-h.show{display:block;}
+
+  /* ---- Custom timer input ---- */
+  .custom-timer-row{display:flex;gap:8px;}
+  .custom-timer-row input{flex:1;}
+  .custom-timer-row button{flex:1;}
+
+  [data-sport-section]{display:none;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Broadcast Control</h1>
+  <span id="conn">connecting…</span>
+</header>
+
+<div class="layout-grid" id="layoutGrid">
+
+<div class="sport-tabs pri-setup" id="sportTabs">
+  <button class="sport-tab" data-sport="soccer"><span class="icon">⚽</span>Soccer</button>
+  <button class="sport-tab" data-sport="basketball"><span class="icon">🏀</span>Basketball</button>
+  <button class="sport-tab" data-sport="volleyball"><span class="icon">🏐</span>Volleyball</button>
+  <button class="sport-tab" data-sport="baseball"><span class="icon">⚾</span>Baseball</button>
+  <button class="sport-tab" data-sport="softball"><span class="icon">🥎</span>Softball</button>
+</div>
+
+<section class="pri-scene">
+  <div class="section-label">Live Scene</div>
+  <div class="mode-grid">
+    <button class="mode-btn" data-mode="scorebug">Scorebug</button>
+    <button class="mode-btn" data-mode="matchup">Matchup</button>
+    <button class="mode-btn" data-mode="halftime" id="halftimeModeBtn">Halftime</button>
+    <button class="mode-btn" data-mode="break">Break</button>
+    <button class="mode-btn off" data-mode="off">Off</button>
+  </div>
+</section>
+
+<section class="pri-score">
+  <div class="section-label">Score</div>
+  <div class="score-pair">
+    <div class="score-side">
+      <div class="score-card">
+        <div class="team-tag"><span class="swatch" id="homeSwatch"></span><span id="homeLabel">HOME</span></div>
+        <div class="score-controls">
+          <button class="score-btn minus" data-action="score" data-side="home" data-delta="-1">–</button>
+          <div class="score-val" id="homeScoreVal">0</div>
+          <button class="score-btn" data-action="score" data-side="home" data-delta="1">+</button>
+        </div>
+      </div>
+      <div class="half-row bonus-row" data-sport-section="basketball" data-show-display="flex">
+        <button class="bonus-btn" data-action="score" data-side="home" data-delta="2">+2</button>
+        <button class="bonus-btn" data-action="score" data-side="home" data-delta="3">+3</button>
+      </div>
+    </div>
+    <div class="score-side">
+      <div class="score-card">
+        <div class="team-tag"><span class="swatch" id="awaySwatch"></span><span id="awayLabel">AWAY</span></div>
+        <div class="score-controls">
+          <button class="score-btn minus" data-action="score" data-side="away" data-delta="-1">–</button>
+          <div class="score-val" id="awayScoreVal">0</div>
+          <button class="score-btn" data-action="score" data-side="away" data-delta="1">+</button>
+        </div>
+      </div>
+      <div class="half-row bonus-row" data-sport-section="basketball" data-show-display="flex">
+        <button class="bonus-btn" data-action="score" data-side="away" data-delta="2">+2</button>
+        <button class="bonus-btn" data-action="score" data-side="away" data-delta="3">+3</button>
+      </div>
+    </div>
+  </div>
+  <button class="reset-btn" id="resetScores">Reset Scores</button>
+</section>
+
+<!-- ============ SOCCER ============ -->
+<section data-sport-section="soccer" class="pri-primary-stats">
+  <div class="section-label">Half</div>
+  <div class="half-row" id="halfRow">
+    <button class="preset-btn" data-half="1st Half">1st</button>
+    <button class="preset-btn" data-half="2nd Half">2nd</button>
+    <button class="preset-btn" data-half="Extra Time">ET</button>
+  </div>
+</section>
+
+<!-- ============ BASKETBALL ============ -->
+<section data-sport-section="basketball" class="pri-primary-stats">
+  <div class="section-label">Quarter</div>
+  <div class="half-row" id="quarterRow">
+    <button class="preset-btn" data-quarter="Q1">Q1</button>
+    <button class="preset-btn" data-quarter="Q2">Q2</button>
+    <button class="preset-btn" data-quarter="Q3">Q3</button>
+    <button class="preset-btn" data-quarter="Q4">Q4</button>
+    <button class="preset-btn" data-quarter="OT">OT</button>
+  </div>
+</section>
+
+<!-- ============ GAME CLOCK (soccer + basketball) ============ -->
+<section data-sport-section="soccer basketball" class="pri-clock">
+  <div class="section-label">Game Clock</div>
+  <div class="clock-display" id="clockDisplay">00:00</div>
+  <div class="row2">
+    <div class="field"><label>Set time (mm:ss)</label><input type="text" id="clockInput" placeholder="45:00"></div>
+    <div class="field" style="justify-content:flex-end;"><button class="apply-btn" id="setClockBtn" style="margin-top:auto;">Set Clock</button></div>
+  </div>
+  <div class="clock-btn-row">
+    <button class="clock-btn start" id="clockStartBtn">▶ Start</button>
+    <button class="clock-btn pause" id="clockPauseBtn">⏸ Pause</button>
+    <button class="clock-btn dir" id="clockDownBtn" data-dir="down">Count Down</button>
+    <button class="clock-btn dir" id="clockUpBtn" data-dir="up">Count Up</button>
+  </div>
+</section>
+
+<section data-sport-section="basketball" class="pri-secondary-stats">
+  <div class="section-label">Fouls</div>
+  <div class="pair-grid">
+    <div class="stat-card">
+      <span class="stat-label" id="foulHomeLabel">Home</span>
+      <div class="stat-controls">
+        <button class="stat-btn" data-action="foul" data-side="home" data-delta="-1">–</button>
+        <span class="stat-val" id="homeFouls">0</span>
+        <button class="stat-btn" data-action="foul" data-side="home" data-delta="1">+</button>
+      </div>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label" id="foulAwayLabel">Away</span>
+      <div class="stat-controls">
+        <button class="stat-btn" data-action="foul" data-side="away" data-delta="-1">–</button>
+        <span class="stat-val" id="awayFouls">0</span>
+        <button class="stat-btn" data-action="foul" data-side="away" data-delta="1">+</button>
+      </div>
+    </div>
+  </div>
+  <div class="section-label">Timeouts Remaining</div>
+  <div class="pair-grid">
+    <div class="stat-card">
+      <span class="stat-label" id="toHomeLabel">Home</span>
+      <div class="stat-controls">
+        <button class="stat-btn" data-action="timeout" data-side="home" data-delta="-1">–</button>
+        <span class="stat-val" id="homeTimeouts">5</span>
+        <button class="stat-btn" data-action="timeout" data-side="home" data-delta="1">+</button>
+      </div>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label" id="toAwayLabel">Away</span>
+      <div class="stat-controls">
+        <button class="stat-btn" data-action="timeout" data-side="away" data-delta="-1">–</button>
+        <span class="stat-val" id="awayTimeouts">5</span>
+        <button class="stat-btn" data-action="timeout" data-side="away" data-delta="1">+</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ VOLLEYBALL ============ -->
+<section data-sport-section="volleyball" class="pri-col1-sport">
+  <div class="section-label">Set</div>
+  <div class="half-row" id="setRow">
+    <button class="preset-btn" data-set="1">1</button>
+    <button class="preset-btn" data-set="2">2</button>
+    <button class="preset-btn" data-set="3">3</button>
+    <button class="preset-btn" data-set="4">4</button>
+    <button class="preset-btn" data-set="5">5</button>
+  </div>
+  <div class="section-label">Sets Won</div>
+  <div class="pair-grid">
+    <div class="stat-card">
+      <span class="stat-label" id="setsWonHomeLabel">Home</span>
+      <div class="stat-controls">
+        <button class="stat-btn" data-action="setswon" data-side="home" data-delta="-1">–</button>
+        <span class="stat-val" id="homeSetsWon">0</span>
+        <button class="stat-btn" data-action="setswon" data-side="home" data-delta="1">+</button>
+      </div>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label" id="setsWonAwayLabel">Away</span>
+      <div class="stat-controls">
+        <button class="stat-btn" data-action="setswon" data-side="away" data-delta="-1">–</button>
+        <span class="stat-val" id="awaySetsWon">0</span>
+        <button class="stat-btn" data-action="setswon" data-side="away" data-delta="1">+</button>
+      </div>
+    </div>
+  </div>
+  <div class="section-label">Serving</div>
+  <div class="serve-row">
+    <button class="serve-btn" id="serveHomeBtn" data-serve="home">Home Serving</button>
+    <button class="serve-btn" id="serveAwayBtn" data-serve="away">Away Serving</button>
+  </div>
+</section>
+
+<!-- ============ BASEBALL / SOFTBALL ============ -->
+<section data-sport-section="baseball softball" class="pri-col1-sport">
+  <div class="section-label">Inning</div>
+  <div class="inning-row">
+    <button class="stat-btn" id="inningMinus">–</button>
+    <div class="inning-num" id="inningNum">1</div>
+    <button class="stat-btn" id="inningPlus">+</button>
+    <button class="half-toggle" id="inningHalfBtn">Top</button>
+  </div>
+  <div class="section-label">Count</div>
+  <div class="row3">
+    <div class="field">
+      <label>Balls (<span id="ballsVal">0</span>)</label>
+      <button class="apply-btn" id="ballBtn" style="margin-top:0;">+ Ball</button>
+    </div>
+    <div class="field">
+      <label>Strikes (<span id="strikesVal">0</span>)</label>
+      <button class="apply-btn" id="strikeBtn" style="margin-top:0;">+ Strike</button>
+    </div>
+    <div class="field">
+      <label>Outs (<span id="outsVal">0</span>)</label>
+      <button class="apply-btn" id="outBtn" style="margin-top:0;">+ Out</button>
+    </div>
+  </div>
+  <button class="reset-btn" id="resetCountBtn" style="margin-top:10px;">Reset Count</button>
+
+  <div class="section-label" style="margin-top:18px;">Runners (tap a base)</div>
+  <div class="diamond-wrap">
+    <div class="diamond">
+      <button class="base second" id="baseSecond" data-base="second"></button>
+      <button class="base first" id="baseFirst" data-base="first"></button>
+      <button class="base third" id="baseThird" data-base="third"></button>
+      <div class="home-plate"></div>
+    </div>
+  </div>
+</section>
+
+<section class="pri-break">
+  <div class="section-label" id="intermissionLabel">Intermission Timer</div>
+  <div class="preset-row">
+    <button class="preset-btn" data-seconds="900">15:00</button>
+    <button class="preset-btn" data-seconds="600">10:00</button>
+    <button class="preset-btn" data-seconds="300">5:00</button>
+  </div>
+  <div class="custom-timer-row">
+    <input type="text" id="customTimerInput" placeholder="mm:ss">
+    <button class="apply-btn" id="customTimerBtn" style="margin-top:0;">Start Custom</button>
+  </div>
+</section>
+
+<details class="pri-team-setup">
+  <summary>Team Setup</summary>
+  <div class="details-body">
+    <div class="row2">
+      <div class="field"><label>Home Name</label><input type="text" id="homeName"></div>
+      <div class="field"><label>Away Name</label><input type="text" id="awayName"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Home Color</label>
+        <div class="color-row">
+          <div class="color-preview" id="homeColorPreview"></div>
+          <input type="text" id="homeColor" placeholder="#1F5FAE" maxlength="7">
+        </div>
+        <div class="palette-row" id="homePalette"></div>
+      </div>
+      <div class="field"><label>Away Color</label>
+        <div class="color-row">
+          <div class="color-preview" id="awayColorPreview"></div>
+          <input type="text" id="awayColor" placeholder="#B3232E" maxlength="7">
+        </div>
+        <div class="palette-row" id="awayPalette"></div>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Home Logo URL</label><input type="url" id="homeLogo" placeholder="https://..."></div>
+      <div class="field"><label>Away Logo URL</label><input type="url" id="awayLogo" placeholder="https://..."></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Home Record</label><input type="text" id="homeRecord" placeholder="8-2"></div>
+      <div class="field"><label>Away Record</label><input type="text" id="awayRecord" placeholder="6-4"></div>
+    </div>
+    <div class="field"><label>League / Conference</label><input type="text" id="league"></div>
+    <div class="field"><label>Event Title</label><input type="text" id="event"></div>
+    <div class="field" id="kickoffField"><label>Kickoff Time</label><input type="text" id="kickoff" placeholder="7:00 PM"></div>
+    <button class="apply-btn" id="saveTeams">Save Team Info</button>
+  </div>
+</details>
+
+<details class="pri-break-setup">
+  <summary>Break / Sponsor</summary>
+  <div class="details-body">
+    <div class="field">
+      <label>Break Type</label>
+      <select id="breakMode">
+        <option value="brb">Be Right Back</option>
+        <option value="timeout">Timeout</option>
+        <option value="sponsor">Sponsor</option>
+      </select>
+    </div>
+    <div class="field"><label>Title</label><input type="text" id="breakTitle"></div>
+    <div class="field"><label>Sponsor Name</label><input type="text" id="sponsor"></div>
+    <div class="field"><label>Sponsor Tagline</label><input type="text" id="sponsorTag"></div>
+    <div class="field"><label>Footer Text</label><input type="text" id="footer"></div>
+    <div class="field"><label>QR Code Image URL</label><input type="url" id="qr" placeholder="https://..."></div>
+    <button class="apply-btn" id="saveBreak">Save Break Info</button>
+  </div>
+</details>
+
+<details id="layoutDetails" class="pri-layout-setup">
+  <summary>Scorebug Layout</summary>
+  <div class="details-body">
+    <div class="layout-editor-wrap" id="layoutEditorWrap">
+      <iframe id="layoutPreviewFrame" class="layout-preview-frame" src="/overlay.html"></iframe>
+      <div class="layout-guide-v" id="layoutGuideV"></div>
+      <div class="layout-guide-h" id="layoutGuideH"></div>
+      <div class="layout-proxy" id="layoutProxy">
+        <div class="layout-proxy-handle" id="layoutProxyHandle" title="Drag to resize"></div>
+      </div>
+    </div>
+    <div class="layout-readout" id="layoutReadout">x:0 y:0 scale:1.00</div>
+    <div class="row2">
+      <button class="apply-btn" id="layoutSaveBtn" style="margin-top:0;">Save Position</button>
+      <button class="reset-btn" id="layoutCancelBtn" style="margin-top:0;">Cancel</button>
+    </div>
+    <button class="reset-btn" id="layoutResetBtn" style="margin-top:10px;">Reset to Default</button>
+  </div>
+</details>
+
+<div class="dash-col" id="dashColA"></div>
+<div class="dash-col" id="dashColB"></div>
+
+</div>
+
+<script>
+  let latestState = null;
+  let ws;
+
+  const KICKOFF_LABELS = { soccer:'Kickoff Time', basketball:'Tip-off Time', volleyball:'First Serve Time', baseball:'First Pitch Time', softball:'First Pitch Time' };
+  const INTERMISSION_LABELS = { soccer:'Halftime Timer', basketball:'Halftime Timer', volleyball:'Between-Sets Timer', baseball:'Inning-Break Timer', softball:'Inning-Break Timer' };
+  const HALFTIME_BTN_LABELS = { soccer:'Halftime', basketball:'Halftime', volleyball:'Set Break', baseball:'Inning Break', softball:'Inning Break' };
+
+  function connect(){
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(`${proto}//${location.host}`);
+    const conn = document.getElementById('conn');
+    ws.onopen = () => { conn.textContent = 'live'; conn.className = 'live'; };
+    ws.onclose = () => { conn.textContent = 'reconnecting…'; conn.className = 'down'; setTimeout(connect, 1500); };
+    ws.onerror = () => ws.close();
+    ws.onmessage = (msg) => {
+      const data = JSON.parse(msg.data);
+      if(data.type === 'STATE'){ latestState = data.state; render(data.state); }
+    };
+  }
+  function send(action){ if(ws && ws.readyState === 1) ws.send(JSON.stringify(action)); }
+
+  function fmtClock(totalSeconds){
+    const s = Math.max(0, Math.round(totalSeconds));
+    const m = Math.floor(s/60), sec = s%60;
+    return `${m}:${sec.toString().padStart(2,'0')}`;
+  }
+
+  function parseClock(text){
+    const t = text.trim();
+    if(!t) return null;
+    if(t.includes(':')){
+      const [m, s] = t.split(':').map(n => parseInt(n, 10));
+      if(isNaN(m) || isNaN(s)) return null;
+      return m*60 + s;
+    }
+    const n = parseInt(t, 10);
+    return isNaN(n) ? null : n;
+  }
+
+  function currentClockSeconds(s){
+    if(!s.clockRunning || s.clockAnchorMs == null) return s.clockSeconds;
+    const elapsed = (Date.now() - s.clockAnchorMs) / 1000;
+    const value = s.clockDirection === 'down' ? s.clockSeconds - elapsed : s.clockSeconds + elapsed;
+    return Math.max(0, value);
+  }
+
+  function renderClock(s){
+    const el = document.getElementById('clockDisplay');
+    const display = fmtClock(currentClockSeconds(s));
+    el.textContent = display;
+    el.classList.toggle('running', s.clockRunning);
+    document.getElementById('clockDownBtn').classList.toggle('active', s.clockDirection === 'down');
+    document.getElementById('clockUpBtn').classList.toggle('active', s.clockDirection === 'up');
+    // Mirror the live value into the editable field too, so the operator can
+    // see the running time and nudge it without hunting for the big display —
+    // but don't fight them while they're actively typing a correction.
+    if(document.activeElement.id !== 'clockInput') document.getElementById('clockInput').value = display;
+  }
+  setInterval(() => { if(latestState) renderClock(latestState); }, 250);
+
+  function render(s){
+    document.querySelectorAll('.sport-tab').forEach(b => b.classList.toggle('active', b.dataset.sport === s.sport));
+    document.querySelectorAll('[data-sport-section]').forEach(el => {
+      const shown = el.dataset.sportSection.split(' ').includes(s.sport);
+      el.style.display = shown ? (el.dataset.showDisplay || 'block') : 'none';
+    });
+
+    document.getElementById('halftimeModeBtn').textContent = HALFTIME_BTN_LABELS[s.sport];
+    document.getElementById('intermissionLabel').textContent = INTERMISSION_LABELS[s.sport];
+    document.querySelector('#kickoffField label').textContent = KICKOFF_LABELS[s.sport];
+
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === s.mode));
+    document.getElementById('homeLabel').textContent = s.home.toUpperCase();
+    document.getElementById('awayLabel').textContent = s.away.toUpperCase();
+    document.getElementById('homeSwatch').style.background = s.homeColor;
+    document.getElementById('awaySwatch').style.background = s.awayColor;
+    document.getElementById('homeScoreVal').textContent = s.homeScore;
+    document.getElementById('awayScoreVal').textContent = s.awayScore;
+
+    document.querySelectorAll('#halfRow .preset-btn').forEach(b => b.classList.toggle('active', b.dataset.half === s.half));
+    document.querySelectorAll('#quarterRow .preset-btn').forEach(b => b.classList.toggle('active', b.dataset.quarter === s.quarter));
+    document.querySelectorAll('#setRow .preset-btn').forEach(b => b.classList.toggle('active', parseInt(b.dataset.set,10) === s.volleyballSet));
+    document.querySelectorAll('[data-seconds]').forEach(b => b.classList.toggle('active', false));
+
+    renderClock(s);
+
+    document.getElementById('homeFouls').textContent = s.fouls.home;
+    document.getElementById('awayFouls').textContent = s.fouls.away;
+    document.getElementById('homeTimeouts').textContent = s.timeouts.home;
+    document.getElementById('awayTimeouts').textContent = s.timeouts.away;
+    document.getElementById('foulHomeLabel').textContent = s.home.toUpperCase();
+    document.getElementById('foulAwayLabel').textContent = s.away.toUpperCase();
+    document.getElementById('toHomeLabel').textContent = s.home.toUpperCase();
+    document.getElementById('toAwayLabel').textContent = s.away.toUpperCase();
+
+    document.getElementById('homeSetsWon').textContent = s.setsWon.home;
+    document.getElementById('awaySetsWon').textContent = s.setsWon.away;
+    document.getElementById('setsWonHomeLabel').textContent = s.home.toUpperCase();
+    document.getElementById('setsWonAwayLabel').textContent = s.away.toUpperCase();
+    document.getElementById('serveHomeBtn').classList.toggle('active', s.servingSide === 'home');
+    document.getElementById('serveAwayBtn').classList.toggle('active', s.servingSide === 'away');
+
+    document.getElementById('inningNum').textContent = s.inning;
+    document.getElementById('inningHalfBtn').textContent = s.inningHalf;
+    document.getElementById('ballsVal').textContent = s.balls;
+    document.getElementById('strikesVal').textContent = s.strikes;
+    document.getElementById('outsVal').textContent = s.outs;
+    document.getElementById('baseFirst').classList.toggle('on', s.bases.first);
+    document.getElementById('baseSecond').classList.toggle('on', s.bases.second);
+    document.getElementById('baseThird').classList.toggle('on', s.bases.third);
+
+    document.getElementById('homeColorPreview').style.background = s.homeColor;
+    document.getElementById('awayColorPreview').style.background = s.awayColor;
+    markSelectedSwatch('homePalette', s.homeColor);
+    markSelectedSwatch('awayPalette', s.awayColor);
+
+    // only fill the setup forms once per field (don't fight the operator mid-typing)
+    if(document.activeElement.id !== 'homeName') document.getElementById('homeName').value = s.home;
+    if(document.activeElement.id !== 'awayName') document.getElementById('awayName').value = s.away;
+    if(document.activeElement.id !== 'homeColor') document.getElementById('homeColor').value = s.homeColor;
+    if(document.activeElement.id !== 'awayColor') document.getElementById('awayColor').value = s.awayColor;
+    if(document.activeElement.id !== 'homeLogo') document.getElementById('homeLogo').value = s.homeLogo || '';
+    if(document.activeElement.id !== 'awayLogo') document.getElementById('awayLogo').value = s.awayLogo || '';
+    if(document.activeElement.id !== 'homeRecord') document.getElementById('homeRecord').value = s.homeRecord;
+    if(document.activeElement.id !== 'awayRecord') document.getElementById('awayRecord').value = s.awayRecord;
+    if(document.activeElement.id !== 'league') document.getElementById('league').value = s.league;
+    if(document.activeElement.id !== 'event') document.getElementById('event').value = s.event;
+    if(document.activeElement.id !== 'kickoff') document.getElementById('kickoff').value = s.kickoff;
+
+    if(document.activeElement.id !== 'breakMode') document.getElementById('breakMode').value = s.breakMode;
+    if(document.activeElement.id !== 'breakTitle') document.getElementById('breakTitle').value = s.breakTitle;
+    if(document.activeElement.id !== 'sponsor') document.getElementById('sponsor').value = s.sponsor;
+    if(document.activeElement.id !== 'sponsorTag') document.getElementById('sponsorTag').value = s.sponsorTag;
+    if(document.activeElement.id !== 'footer') document.getElementById('footer').value = s.footer;
+    if(document.activeElement.id !== 'qr') document.getElementById('qr').value = s.qr;
+  }
+
+  document.querySelectorAll('.sport-tab').forEach(btn => {
+    btn.addEventListener('click', () => send({ type: 'SET_SPORT', sport: btn.dataset.sport }));
+  });
+
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => send({ type: 'SET_MODE', mode: btn.dataset.mode }));
+  });
+
+  document.querySelectorAll('[data-action="score"]').forEach(btn => {
+    btn.addEventListener('click', () => send({
+      type: 'SCORE_DELTA', side: btn.dataset.side, delta: parseInt(btn.dataset.delta, 10)
+    }));
+  });
+
+  document.getElementById('resetScores').addEventListener('click', () => send({ type: 'RESET_SCORES' }));
+
+  document.querySelectorAll('#halfRow .preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => send({ type: 'SET_HALF', text: btn.dataset.half }));
+  });
+
+  document.querySelectorAll('#quarterRow .preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => send({ type: 'SET_QUARTER', quarter: btn.dataset.quarter }));
+  });
+
+  document.querySelectorAll('#setRow .preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => send({ type: 'SET_VOLLEYBALL_SET', set: parseInt(btn.dataset.set, 10) }));
+  });
+
+  document.getElementById('setClockBtn').addEventListener('click', () => {
+    const seconds = parseClock(document.getElementById('clockInput').value);
+    if(seconds !== null) send({ type: 'SET_CLOCK', seconds });
+  });
+  document.getElementById('clockStartBtn').addEventListener('click', () => send({ type: 'START_CLOCK' }));
+  document.getElementById('clockPauseBtn').addEventListener('click', () => send({ type: 'PAUSE_CLOCK' }));
+  document.getElementById('clockDownBtn').addEventListener('click', () => send({ type: 'SET_CLOCK_DIRECTION', direction: 'down' }));
+  document.getElementById('clockUpBtn').addEventListener('click', () => send({ type: 'SET_CLOCK_DIRECTION', direction: 'up' }));
+
+  document.querySelectorAll('[data-action="foul"]').forEach(btn => {
+    btn.addEventListener('click', () => send({ type: 'FOUL_DELTA', side: btn.dataset.side, delta: parseInt(btn.dataset.delta, 10) }));
+  });
+  document.querySelectorAll('[data-action="timeout"]').forEach(btn => {
+    btn.addEventListener('click', () => send({ type: 'TIMEOUT_DELTA', side: btn.dataset.side, delta: parseInt(btn.dataset.delta, 10) }));
+  });
+  document.querySelectorAll('[data-action="setswon"]').forEach(btn => {
+    btn.addEventListener('click', () => send({ type: 'SETS_WON_DELTA', side: btn.dataset.side, delta: parseInt(btn.dataset.delta, 10) }));
+  });
+  document.getElementById('serveHomeBtn').addEventListener('click', () => send({ type: 'SET_SERVE', side: 'home' }));
+  document.getElementById('serveAwayBtn').addEventListener('click', () => send({ type: 'SET_SERVE', side: 'away' }));
+
+  document.getElementById('inningPlus').addEventListener('click', () => {
+    if(!latestState) return;
+    send({ type: 'SET_INNING', inning: latestState.inning + 1, half: latestState.inningHalf });
+  });
+  document.getElementById('inningMinus').addEventListener('click', () => {
+    if(!latestState) return;
+    send({ type: 'SET_INNING', inning: Math.max(1, latestState.inning - 1), half: latestState.inningHalf });
+  });
+  document.getElementById('inningHalfBtn').addEventListener('click', () => {
+    if(!latestState) return;
+    send({ type: 'SET_INNING', inning: latestState.inning, half: latestState.inningHalf === 'Top' ? 'Bottom' : 'Top' });
+  });
+  document.getElementById('ballBtn').addEventListener('click', () => send({ type: 'BB_BALL' }));
+  document.getElementById('strikeBtn').addEventListener('click', () => send({ type: 'BB_STRIKE' }));
+  document.getElementById('outBtn').addEventListener('click', () => send({ type: 'OUT_DELTA', delta: 1 }));
+  document.getElementById('resetCountBtn').addEventListener('click', () => send({ type: 'BB_RESET_COUNT' }));
+
+  document.querySelectorAll('[data-seconds]').forEach(btn => {
+    btn.addEventListener('click', () => send({ type: 'START_HALFTIME_TIMER', seconds: parseInt(btn.dataset.seconds, 10) }));
+  });
+  document.getElementById('customTimerBtn').addEventListener('click', () => {
+    const seconds = parseClock(document.getElementById('customTimerInput').value);
+    if(seconds !== null) send({ type: 'START_HALFTIME_TIMER', seconds });
+  });
+
+  document.querySelectorAll('.diamond .base').forEach(btn => {
+    btn.addEventListener('click', () => send({ type: 'TOGGLE_BASE', base: btn.dataset.base }));
+  });
+
+  const COLOR_PALETTE = [
+    '#1F5FAE', '#B3232E', '#D4AF37', '#3CA35A', '#C24343', '#2C3E50',
+    '#8E44AD', '#E67E22', '#16A085', '#F1C40F', '#000000', '#FFFFFF'
+  ];
+  function buildPalette(containerId, inputId, previewId){
+    const container = document.getElementById(containerId);
+    COLOR_PALETTE.forEach(hex => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'palette-swatch';
+      btn.dataset.hex = hex;
+      btn.style.background = hex;
+      btn.addEventListener('click', () => {
+        document.getElementById(inputId).value = hex;
+        document.getElementById(previewId).style.background = hex;
+        markSelectedSwatch(containerId, hex);
+      });
+      container.appendChild(btn);
+    });
+  }
+  function markSelectedSwatch(containerId, hex){
+    document.querySelectorAll('#' + containerId + ' .palette-swatch').forEach(btn => {
+      btn.classList.toggle('selected', btn.dataset.hex.toLowerCase() === (hex || '').toLowerCase());
+    });
+  }
+  buildPalette('homePalette', 'homeColor', 'homeColorPreview');
+  buildPalette('awayPalette', 'awayColor', 'awayColorPreview');
+  document.getElementById('homeColor').addEventListener('input', (e) => {
+    document.getElementById('homeColorPreview').style.background = e.target.value;
+    markSelectedSwatch('homePalette', e.target.value);
+  });
+  document.getElementById('awayColor').addEventListener('input', (e) => {
+    document.getElementById('awayColorPreview').style.background = e.target.value;
+    markSelectedSwatch('awayPalette', e.target.value);
+  });
+
+  document.getElementById('saveTeams').addEventListener('click', () => {
+    send({
+      type: 'UPDATE_TEAMS',
+      data: {
+        home: document.getElementById('homeName').value || 'HOME',
+        away: document.getElementById('awayName').value || 'AWAY',
+        homeColor: document.getElementById('homeColor').value,
+        awayColor: document.getElementById('awayColor').value,
+        homeLogo: document.getElementById('homeLogo').value,
+        awayLogo: document.getElementById('awayLogo').value,
+        homeRecord: document.getElementById('homeRecord').value,
+        awayRecord: document.getElementById('awayRecord').value,
+        league: document.getElementById('league').value,
+        event: document.getElementById('event').value,
+        kickoff: document.getElementById('kickoff').value
+      }
+    });
+  });
+
+  document.getElementById('saveBreak').addEventListener('click', () => {
+    send({
+      type: 'UPDATE_BREAK',
+      data: {
+        breakMode: document.getElementById('breakMode').value,
+        breakTitle: document.getElementById('breakTitle').value,
+        sponsor: document.getElementById('sponsor').value,
+        sponsorTag: document.getElementById('sponsorTag').value,
+        footer: document.getElementById('footer').value,
+        qr: document.getElementById('qr').value
+      }
+    });
+  });
+
+  // ---------------- Scorebug layout editor ----------------
+  // Draft-then-save: dragging the proxy box only updates local `draft` and
+  // moves the proxy div. Nothing reaches the server (or the real overlay)
+  // until "Save Position" is clicked.
+  let layoutEditorState = null; // { previewScale, nativeWidth, nativeHeight }
+  let layoutDraft = { x: 0, y: 0, scale: 1 };
+  let layoutDragInfo = null;
+
+  function initLayoutEditor(){
+    const wrap = document.getElementById('layoutEditorWrap');
+    const frame = document.getElementById('layoutPreviewFrame');
+    const previewScale = wrap.clientWidth / 1920;
+    frame.style.transform = `scale(${previewScale})`;
+
+    const base = Object.assign({ x: 0, y: 0, scale: 1 }, (latestState && latestState.scorebugLayout) || {});
+    layoutDraft = Object.assign({}, base);
+
+    let rect;
+    try {
+      const stage = frame.contentDocument.querySelector('#scene-scorebug .stage');
+      rect = stage.getBoundingClientRect();
+    } catch (e) {
+      rect = { left: 1920 * 0.25, top: 1080 * 0.72, width: 1920 * 0.5, height: 1080 * 0.12 };
+    }
+    layoutEditorState = {
+      previewScale,
+      nativeWidth: rect.width / base.scale,
+      nativeHeight: rect.height / base.scale
+    };
+    positionLayoutProxy(rect.left * previewScale, rect.top * previewScale, rect.width * previewScale, rect.height * previewScale);
+    updateLayoutReadout();
+    updateSnapGuides(false, false);
+  }
+
+  function positionLayoutProxy(left, top, width, height){
+    const proxy = document.getElementById('layoutProxy');
+    proxy.style.left = left + 'px';
+    proxy.style.top = top + 'px';
+    proxy.style.width = width + 'px';
+    proxy.style.height = height + 'px';
+  }
+
+  function updateLayoutReadout(){
+    document.getElementById('layoutReadout').textContent =
+      `x:${Math.round(layoutDraft.x)} y:${Math.round(layoutDraft.y)} scale:${layoutDraft.scale.toFixed(2)}`;
+  }
+
+  document.getElementById('layoutDetails').addEventListener('toggle', function(){
+    if(this.open) setTimeout(initLayoutEditor, 60);
+  });
+
+  document.getElementById('layoutProxy').addEventListener('pointerdown', (e) => {
+    if(e.target.id === 'layoutProxyHandle') return;
+    e.preventDefault();
+    const proxy = document.getElementById('layoutProxy');
+    layoutDragInfo = {
+      mode: 'move',
+      startClientX: e.clientX, startClientY: e.clientY,
+      startLeft: parseFloat(proxy.style.left), startTop: parseFloat(proxy.style.top),
+      startWidth: parseFloat(proxy.style.width), startHeight: parseFloat(proxy.style.height),
+      startDraftX: layoutDraft.x, startDraftY: layoutDraft.y
+    };
+    document.addEventListener('pointermove', onLayoutDragMove);
+    document.addEventListener('pointerup', onLayoutDragEnd, { once: true });
+  });
+
+  document.getElementById('layoutProxyHandle').addEventListener('pointerdown', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    const proxy = document.getElementById('layoutProxy');
+    const left = parseFloat(proxy.style.left), top = parseFloat(proxy.style.top);
+    const width = parseFloat(proxy.style.width), height = parseFloat(proxy.style.height);
+    layoutDragInfo = {
+      mode: 'resize',
+      startClientX: e.clientX, startClientY: e.clientY,
+      centerX: left + width / 2, centerY: top + height / 2,
+      startDraftScale: layoutDraft.scale
+    };
+    document.addEventListener('pointermove', onLayoutDragMove);
+    document.addEventListener('pointerup', onLayoutDragEnd, { once: true });
+  });
+
+  const SNAP_THRESHOLD_PX = 10; // preview-space pixels
+
+  function updateSnapGuides(showV, showH){
+    document.getElementById('layoutGuideV').classList.toggle('show', showV);
+    document.getElementById('layoutGuideH').classList.toggle('show', showH);
+  }
+
+  function onLayoutDragMove(e){
+    if(!layoutDragInfo) return;
+    const dxPreview = e.clientX - layoutDragInfo.startClientX;
+    const dyPreview = e.clientY - layoutDragInfo.startClientY;
+    if(layoutDragInfo.mode === 'move'){
+      const wrap = document.getElementById('layoutEditorWrap');
+      const width = layoutDragInfo.startWidth, height = layoutDragInfo.startHeight;
+      let newLeft = layoutDragInfo.startLeft + dxPreview;
+      let newTop = layoutDragInfo.startTop + dyPreview;
+
+      // Snap the box's own center to the canvas's center on each axis
+      // independently, Instagram-story-style, and light up a dashed guide
+      // for whichever axis is currently snapped.
+      const canvasCenterX = wrap.clientWidth / 2;
+      const canvasCenterY = wrap.clientHeight / 2;
+      const snappedX = Math.abs((newLeft + width / 2) - canvasCenterX) < SNAP_THRESHOLD_PX;
+      const snappedY = Math.abs((newTop + height / 2) - canvasCenterY) < SNAP_THRESHOLD_PX;
+      if(snappedX) newLeft = canvasCenterX - width / 2;
+      if(snappedY) newTop = canvasCenterY - height / 2;
+      updateSnapGuides(snappedX, snappedY);
+
+      positionLayoutProxy(newLeft, newTop, width, height);
+      layoutDraft.x = layoutDragInfo.startDraftX + (newLeft - layoutDragInfo.startLeft) / layoutEditorState.previewScale;
+      layoutDraft.y = layoutDragInfo.startDraftY + (newTop - layoutDragInfo.startTop) / layoutEditorState.previewScale;
+    } else {
+      const dxNative = dxPreview / layoutEditorState.previewScale;
+      const dyNative = dyPreview / layoutEditorState.previewScale;
+      const newScale = Math.min(2.5, Math.max(0.4, layoutDragInfo.startDraftScale + (dxNative + dyNative) / 300));
+      const newWidth = layoutEditorState.nativeWidth * newScale * layoutEditorState.previewScale;
+      const newHeight = layoutEditorState.nativeHeight * newScale * layoutEditorState.previewScale;
+      positionLayoutProxy(layoutDragInfo.centerX - newWidth / 2, layoutDragInfo.centerY - newHeight / 2, newWidth, newHeight);
+      layoutDraft.scale = newScale;
+    }
+    updateLayoutReadout();
+  }
+
+  function onLayoutDragEnd(){
+    document.removeEventListener('pointermove', onLayoutDragMove);
+    layoutDragInfo = null;
+    updateSnapGuides(false, false);
+  }
+
+  document.getElementById('layoutSaveBtn').addEventListener('click', () => {
+    send({ type: 'SET_SCOREBUG_LAYOUT', x: layoutDraft.x, y: layoutDraft.y, scale: layoutDraft.scale });
+  });
+  document.getElementById('layoutCancelBtn').addEventListener('click', initLayoutEditor);
+  document.getElementById('layoutResetBtn').addEventListener('click', () => {
+    send({ type: 'RESET_SCOREBUG_LAYOUT' });
+    setTimeout(initLayoutEditor, 200);
+  });
+
+  // ---------------- Tablet/desktop dashboard columns ----------------
+  // Real DOM moves rather than CSS grid-column (see the .layout-grid
+  // comment in <style>): elements are relocated, not cloned, so their IDs,
+  // listeners, and state (an open <details>, the layout-editor iframe)
+  // travel with them. `mobileOrder` is captured once, before anything
+  // moves, so crossing back below the breakpoint restores it exactly.
+  const dashGrid = document.getElementById('layoutGrid');
+  const dashColA = document.getElementById('dashColA');
+  const dashColB = document.getElementById('dashColB');
+  const mobileOrder = Array.from(dashGrid.children).filter(el => el !== dashColA && el !== dashColB);
+  // Soccer/basketball fill column 1 with the Game Clock below the score;
+  // volleyball/baseball/softball have no clock, so their own sport section
+  // (set/sets-won/serving, or inning/count/runners) takes that slot instead
+  // — otherwise column 1 would sit mostly empty for those sports while
+  // column 2 carried everything.
+  const dashColASelectors = ['.pri-setup', '.pri-score', '.pri-clock', '.pri-col1-sport'];
+  const dashColBSelectors = ['.pri-primary-stats', '.pri-secondary-stats', '.pri-scene', '.pri-break',
+    '.pri-team-setup', '.pri-break-setup', '.pri-layout-setup'];
+
+  function applyDashboardMode(mql){
+    if(mql.matches){
+      dashColASelectors.forEach(sel => dashGrid.querySelectorAll(sel).forEach(el => dashColA.appendChild(el)));
+      dashColBSelectors.forEach(sel => dashGrid.querySelectorAll(sel).forEach(el => dashColB.appendChild(el)));
+    } else {
+      mobileOrder.forEach(el => dashGrid.appendChild(el));
+      dashGrid.appendChild(dashColA);
+      dashGrid.appendChild(dashColB);
+    }
+  }
+  const dashboardMQ = window.matchMedia('(min-width: 720px)');
+  applyDashboardMode(dashboardMQ);
+  dashboardMQ.addEventListener('change', applyDashboardMode);
+
+  connect();
+</script>
+</body>
+</html>
