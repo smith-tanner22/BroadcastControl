@@ -53,3 +53,51 @@ buttons instead of (or alongside) the touch control panel.
 - Team names, colors, records, league/event text, kickoff time
 - Break screen: type (timeout/BRB/sponsor), title, sponsor name + tagline,
   footer text, QR code image URL
+
+## Home team (EAC) and the opponent roster
+
+Since this overlay is only ever used for EAC broadcasts, the home side's name
+(`EAC`), color, and logo are baked in as defaults in `server.js` rather than
+typed in every gameday. Name/color are still editable in the control panel's
+Team Setup section if you ever need to override them for a special event.
+
+- **EAC's logo** lives at `public/logos/eac.png`. Replace that file to update
+  the crest everywhere (control panel + overlay pick it up automatically).
+  There's no logo-URL field in the control panel for either side — home is
+  always that file, and away comes from the roster pick below (or stays
+  blank for a Custom opponent), never hand-typed.
+- **Opponents** live in `public/teams.json` — a plain array, no server
+  restart needed:
+
+  ```json
+  [
+    { "name": "Some High School", "abbr": "SHS", "color": "#123456", "logo": "/logos/some-high-school.png" }
+  ]
+  ```
+
+  `abbr` is the short label shown big in the scorebug (keeps both sides of
+  the bar the same size no matter how long the opponent's real name is);
+  `name` is the full name shown in small text underneath it. Drop each
+  opponent's logo image into `public/logos/`, add a matching entry to
+  `teams.json`, and it shows up in the "Away Opponent" dropdown on the
+  control panel. Selecting a team auto-fills the away abbreviation/full
+  name/color/logo and locks those fields; pick "Custom / Other…" from the
+  dropdown to type in an opponent that isn't in the list yet.
+
+  The abbreviations currently in `teams.json` are placeholders I guessed
+  from each school's name — edit the `abbr` value for any team if you'd
+  rather use something else (e.g. a mascot name or conference shorthand).
+
+- **Color swatches** are split by side: Home only offers EAC's own colors
+  (purple, gold, black, white, and pink for breast cancer awareness games),
+  while Away offers a much larger general-purpose palette to cover whatever
+  opponent's brand colors don't already match. Either side's hex field can
+  still be typed by hand for an exact match. Picking a roster team fills in
+  a default away color, but it's never locked — tweak it and hit Save like
+  any other field.
+
+- **Crest background**: each side's logo badge sits on a plain white or
+  black matte (not the team color) so the logo itself stays legible instead
+  of fighting a random background color. Toggle it per side in the Team
+  Setup section ("Home/Away Logo Background") — it applies instantly, no
+  need to hit Save.

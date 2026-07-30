@@ -21,7 +21,10 @@
     position:absolute;bottom:48px;left:50%;transform:translateX(-50%);
     display:flex;align-items:stretch;filter:drop-shadow(0 8px 24px rgba(0,0,0,0.45));
   }
-  .team{position:relative;display:flex;align-items:center;gap:14px;background:var(--panel-alpha);padding:10px 28px;}
+  /* Pinned to the bottom of the stage row instead of the default stretch —
+     so when the center column grows tall for the camera window (below), the
+     side team panels stay their normal size and don't stretch to match. */
+  .team{position:relative;display:flex;align-items:center;gap:14px;background:var(--panel-alpha);padding:10px 28px;align-self:flex-end;}
   /* Top two points are pulled up into negative territory (a plain rectangular
      cap, no extra slant) purely so the score-flash pop-up isn't cropped by
      this clip-path — the visible 0%-100% region and its diagonal edge are
@@ -35,9 +38,21 @@
     display:flex;align-items:center;justify-content:center;font-family:var(--display);
     font-weight:800;font-size:22px;color:var(--white);border:2px solid var(--line);flex-shrink:0;overflow:hidden;}
   .team.home .crest-sm{background:var(--home-color);} .team.away .crest-sm{background:var(--away-color);}
-  .name-wrap{display:flex;align-items:center;gap:8px;}
+  /* Fixed width so both sides of the scorebug match visually regardless of
+     how long the opponent's name is — the abbreviation stays big/constant,
+     the full name below it truncates with an ellipsis instead of growing
+     the box or shrinking the primary text. */
+  .name-col{display:flex;flex-direction:column;width:230px;overflow:hidden;}
+  .team.home .name-col{align-items:flex-start;}
+  .team.away .name-col{align-items:flex-end;}
+  .name-wrap{display:flex;align-items:center;gap:8px;max-width:100%;}
   .name-sm{font-family:var(--display);font-weight:700;font-size:30px;letter-spacing:0.5px;
-    color:var(--white);text-transform:uppercase;white-space:nowrap;}
+    color:var(--white);text-transform:uppercase;white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis;max-width:100%;}
+  .name-full{font-family:var(--body);font-weight:600;font-size:13px;letter-spacing:0.5px;
+    color:rgba(255,255,255,0.55);text-transform:uppercase;white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis;max-width:100%;margin-top:1px;}
+  .name-full:empty{display:none;}
   .serve-dot{width:10px;height:10px;border-radius:50%;background:var(--gold);display:none;flex-shrink:0;}
   .serve-dot.show{display:block;}
   .score-stack{position:relative;display:flex;flex-direction:column;align-items:center;}
@@ -54,10 +69,33 @@
   .center-sm{background:var(--pitch);display:flex;flex-direction:column;align-items:center;justify-content:center;
     padding:6px 26px;position:relative;z-index:2;min-width:140px;}
   .center-sm::before{content:"";position:absolute;left:50%;top:8px;bottom:8px;width:1px;background:var(--line);transform:translateX(-50%);}
+  /* With the clock hidden, the column's own opaque backing would otherwise
+     sit behind the "transparent" scoreboard-box and block the camera feed
+     from showing through — drop the fill (and the divider line drawn over
+     it) so the box is an actual hole through to whatever's underneath. */
+  .center-sm.cam-hole{background:transparent;}
+  .center-sm.cam-hole::before{display:none;}
   .clock-sm{font-family:var(--display);font-weight:700;font-size:24px;color:var(--white);letter-spacing:1px;display:none;}
   .clock-sm.show{display:block;}
+
+  /* Sits in the clock's slot in the scorebug's center column when the clock
+     is toggled off. No fill — the YoloBox layers this graphics page on top
+     of the live camera feed, so a transparent interior lets whatever the
+     camera sees (e.g. the venue's physical scoreboard) show through inside
+     a framed window, instead of a bare unmarked gap. Its height (plus
+     whatever else is left showing below it, like soccer's half label) is
+     what grows the center column taller — the side team panels are pinned
+     to the bottom of the row via .team's align-self so only the center
+     notch rises to make room. Basketball's window is bigger since it has to
+     fit the venue board's clock+quarter+timeouts+fouls all at once, where
+     soccer only needs to cover the clock digits. */
+  .scoreboard-box{width:220px;height:150px;border:1px solid var(--line);border-radius:4px;
+    background:transparent;display:none;margin:6px 0;}
+  .scoreboard-box.show{display:block;}
+  .scoreboard-box.bb{width:320px;height:280px;}
   .period-sm{font-family:var(--body);font-weight:600;font-size:12px;color:rgba(255,255,255,0.65);
     text-transform:uppercase;letter-spacing:2px;margin-top:2px;}
+  .period-sm.hide-cam{display:none;}
   .extra-sm{font-family:var(--body);font-weight:600;font-size:12px;color:var(--gold);
     text-transform:uppercase;letter-spacing:1px;margin-top:4px;display:none;}
   .extra-sm.show{display:block;}
@@ -95,6 +133,10 @@
   .side.home .crest-lg{background:var(--home-color);} .side.away .crest-lg{background:var(--away-color);}
   .team-name-lg{font-family:var(--display);font-weight:800;font-size:42px;color:var(--white);
     text-transform:uppercase;letter-spacing:1px;text-align:center;}
+  .team-full-lg{font-family:var(--body);font-weight:600;font-size:15px;color:rgba(255,255,255,0.55);
+    letter-spacing:0.5px;text-transform:uppercase;text-align:center;margin-top:4px;max-width:100%;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .team-full-lg:empty{display:none;}
   .record{font-family:var(--body);font-weight:600;font-size:15px;color:rgba(255,255,255,0.55);
     letter-spacing:1px;margin-top:6px;}
   .vs{font-family:var(--display);font-weight:700;font-size:34px;color:var(--white);
@@ -116,6 +158,10 @@
     font-family:var(--display);font-weight:800;font-size:32px;color:var(--white);border:2px solid var(--line);margin-bottom:12px;overflow:hidden;}
   .side-sm.home .crest-md{background:var(--home-color);} .side-sm.away .crest-md{background:var(--away-color);}
   .team-name-md{font-family:var(--display);font-weight:700;font-size:24px;color:var(--white);text-transform:uppercase;letter-spacing:1px;}
+  .team-full-md{font-family:var(--body);font-weight:600;font-size:12px;color:rgba(255,255,255,0.55);
+    letter-spacing:0.5px;text-transform:uppercase;text-align:center;margin-top:2px;max-width:100%;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .team-full-md:empty{display:none;}
   .score-lg{font-family:var(--display);font-weight:800;font-size:56px;color:var(--white);margin-top:6px;}
   .dash{font-family:var(--display);font-weight:700;font-size:40px;color:rgba(255,255,255,0.35);}
   .back-in{margin-top:36px;font-family:var(--body);font-weight:600;font-size:14px;letter-spacing:2px;
@@ -151,15 +197,19 @@
       <div class="team home">
         <div class="stripe"></div>
         <div class="crest-sm" id="homeCrest">H</div>
-        <div class="name-wrap"><div class="serve-dot" id="homeServe"></div><div class="name-sm" id="homeName">HOME</div></div>
+        <div class="name-col">
+          <div class="name-wrap"><div class="serve-dot" id="homeServe"></div><div class="name-sm" id="homeName">HOME</div></div>
+          <div class="name-full" id="homeFullName"></div>
+        </div>
         <div class="score-stack">
           <div class="score-flash" id="homeFlash"></div>
           <div class="score-sm" id="homeScore">0</div>
           <div class="sub-stat" id="homeSubStat"></div>
         </div>
       </div>
-      <div class="center-sm">
+      <div class="center-sm" id="centerSm">
         <div class="clock-sm" id="clock">00:00</div>
+        <div class="scoreboard-box" id="scoreboardBox"></div>
         <div class="period-sm" id="period">1ST HALF</div>
         <div class="mini-diamond" id="miniDiamond">
           <div class="mbase second" id="mbSecond"></div>
@@ -174,7 +224,10 @@
           <div class="score-sm" id="awayScore">0</div>
           <div class="sub-stat" id="awaySubStat"></div>
         </div>
-        <div class="name-wrap"><div class="name-sm" id="awayName">AWAY</div><div class="serve-dot" id="awayServe"></div></div>
+        <div class="name-col">
+          <div class="name-wrap"><div class="name-sm" id="awayName">AWAY</div><div class="serve-dot" id="awayServe"></div></div>
+          <div class="name-full" id="awayFullName"></div>
+        </div>
         <div class="crest-sm" id="awayCrest">A</div>
         <div class="stripe"></div>
       </div>
@@ -189,12 +242,14 @@
         <div class="side home">
           <div class="crest-lg" id="mHomeCrest">H</div>
           <div class="team-name-lg" id="mHomeName">HOME</div>
+          <div class="team-full-lg" id="mHomeFullName"></div>
           <div class="record" id="homeRecord">0-0</div>
         </div>
         <div class="vs">VS</div>
         <div class="side away">
           <div class="crest-lg" id="mAwayCrest">A</div>
           <div class="team-name-lg" id="mAwayName">AWAY</div>
+          <div class="team-full-lg" id="mAwayFullName"></div>
           <div class="record" id="awayRecord">0-0</div>
         </div>
       </div>
@@ -210,12 +265,14 @@
         <div class="side-sm home">
           <div class="crest-md" id="htHomeCrest">H</div>
           <div class="team-name-md" id="htHomeName">HOME</div>
+          <div class="team-full-md" id="htHomeFullName"></div>
           <div class="score-lg" id="htHomeScore">0</div>
         </div>
         <div class="dash">–</div>
         <div class="side-sm away">
           <div class="crest-md" id="htAwayCrest">A</div>
           <div class="team-name-md" id="htAwayName">AWAY</div>
+          <div class="team-full-md" id="htAwayFullName"></div>
           <div class="score-lg" id="htAwayScore">0</div>
         </div>
       </div>
@@ -256,14 +313,20 @@
     });
   }
 
-  function setCrest(el, logoUrl, initial){
+  function setCrest(el, logoUrl, initial, teamColor, logoBg){
     el.textContent = '';
     if(logoUrl){
+      // A plain white/black matte behind the logo (operator-picked) reads
+      // far better than the team color, which fights with the logo's own
+      // colors — and `contain` (not `cover`) so non-square/non-circular
+      // logos show in full instead of getting cropped to fill the circle.
+      el.style.background = logoBg || '#FFFFFF';
       const img = document.createElement('img');
       img.src = logoUrl;
-      img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+      img.style.cssText = 'width:80%;height:80%;object-fit:contain;';
       el.appendChild(img);
     } else {
+      el.style.background = teamColor;
       el.textContent = initial;
     }
   }
@@ -292,15 +355,30 @@
 
     document.getElementById('homeName').textContent = s.home;
     document.getElementById('awayName').textContent = s.away;
-    setCrest(document.getElementById('homeCrest'), s.homeLogo, s.home.slice(0,1));
-    setCrest(document.getElementById('awayCrest'), s.awayLogo, s.away.slice(0,1));
+    document.getElementById('homeFullName').textContent = s.homeFullName || '';
+    document.getElementById('awayFullName').textContent = s.awayFullName || '';
+    setCrest(document.getElementById('homeCrest'), s.homeLogo, s.home.slice(0,1), s.homeColor, s.homeLogoBg);
+    setCrest(document.getElementById('awayCrest'), s.awayLogo, s.away.slice(0,1), s.awayColor, s.awayLogoBg);
     document.getElementById('homeScore').textContent = s.homeScore;
     document.getElementById('awayScore').textContent = s.awayScore;
     document.getElementById('period').textContent = periodLabel(s);
 
-    // Clock only means something for soccer/basketball
-    const showClock = s.sport === 'soccer' || s.sport === 'basketball';
-    document.getElementById('clock').classList.toggle('show', showClock);
+    // Clock only means something for soccer/basketball, and can be toggled
+    // off in favor of a physical scoreboard shot showing through the camera.
+    // The two sports lean on that camera window differently: soccer's real
+    // scoreboards are basically just a clock, so we keep running our own
+    // half label and only swap the clock digits for the window. Basketball
+    // venue boards carry the quarter/fouls/timeouts too, so once the clock's
+    // off we drop all of our own readouts and hand the whole notch over.
+    const clockEligible = s.sport === 'soccer' || s.sport === 'basketball';
+    const clockOn = clockEligible && s.clockVisible !== false;
+    const camHole = clockEligible && !clockOn;
+    const isBasketball = s.sport === 'basketball';
+    document.getElementById('clock').classList.toggle('show', clockOn);
+    document.getElementById('scoreboardBox').classList.toggle('show', camHole);
+    document.getElementById('scoreboardBox').classList.toggle('bb', isBasketball);
+    document.getElementById('centerSm').classList.toggle('cam-hole', camHole);
+    document.getElementById('period').classList.toggle('hide-cam', camHole && isBasketball);
 
     // Sport-specific sub-stats on the scorebug
     const homeSub = document.getElementById('homeSubStat');
@@ -313,11 +391,17 @@
     document.getElementById('miniDiamond').classList.remove('show');
 
     if(s.sport === 'basketball'){
-      homeSub.textContent = s.fouls.home + ' PF';
-      awaySub.textContent = s.fouls.away + ' PF';
-      homeSub.classList.add('show'); awaySub.classList.add('show');
-      extra.textContent = 'TO ' + s.timeouts.home + '-' + s.timeouts.away;
-      extra.classList.add('show');
+      // Fouls/timeouts stay our own responsibility only while the digital
+      // clock is running the show — once it's off, the camera window is
+      // showing the real board's fouls/timeouts too, so ours would just
+      // duplicate (and likely drift from) what's already on screen.
+      if(clockOn){
+        homeSub.textContent = s.fouls.home + ' PF';
+        awaySub.textContent = s.fouls.away + ' PF';
+        homeSub.classList.add('show'); awaySub.classList.add('show');
+        extra.textContent = 'TO ' + s.timeouts.home + '-' + s.timeouts.away;
+        extra.classList.add('show');
+      }
     } else if(s.sport === 'volleyball'){
       extra.textContent = 'SETS ' + s.setsWon.home + '-' + s.setsWon.away;
       extra.classList.add('show');
@@ -336,8 +420,10 @@
     document.getElementById('event').textContent = s.event;
     document.getElementById('mHomeName').textContent = s.home;
     document.getElementById('mAwayName').textContent = s.away;
-    setCrest(document.getElementById('mHomeCrest'), s.homeLogo, s.home.slice(0,1));
-    setCrest(document.getElementById('mAwayCrest'), s.awayLogo, s.away.slice(0,1));
+    document.getElementById('mHomeFullName').textContent = s.homeFullName || '';
+    document.getElementById('mAwayFullName').textContent = s.awayFullName || '';
+    setCrest(document.getElementById('mHomeCrest'), s.homeLogo, s.home.slice(0,1), s.homeColor, s.homeLogoBg);
+    setCrest(document.getElementById('mAwayCrest'), s.awayLogo, s.away.slice(0,1), s.awayColor, s.awayLogoBg);
     document.getElementById('homeRecord').textContent = s.homeRecord;
     document.getElementById('awayRecord').textContent = s.awayRecord;
     document.getElementById('kickoffLabel').textContent = KICKOFF_LABELS[s.sport];
@@ -347,8 +433,10 @@
     document.getElementById('htEvent').textContent = s.event;
     document.getElementById('htHomeName').textContent = s.home;
     document.getElementById('htAwayName').textContent = s.away;
-    setCrest(document.getElementById('htHomeCrest'), s.homeLogo, s.home.slice(0,1));
-    setCrest(document.getElementById('htAwayCrest'), s.awayLogo, s.away.slice(0,1));
+    document.getElementById('htHomeFullName').textContent = s.homeFullName || '';
+    document.getElementById('htAwayFullName').textContent = s.awayFullName || '';
+    setCrest(document.getElementById('htHomeCrest'), s.homeLogo, s.home.slice(0,1), s.homeColor, s.homeLogoBg);
+    setCrest(document.getElementById('htAwayCrest'), s.awayLogo, s.away.slice(0,1), s.awayColor, s.awayLogoBg);
     document.getElementById('htHomeScore').textContent = s.homeScore;
     document.getElementById('htAwayScore').textContent = s.awayScore;
 

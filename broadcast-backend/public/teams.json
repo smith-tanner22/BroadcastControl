@@ -1,0 +1,20 @@
+[
+  { "name": "Arizona Christian University", "abbr": "ACU", "color": "#D32F2F", "logo": "/logos/arizonachristianuniversity.png" },
+  { "name": "Arizona Western College", "abbr": "AWC", "color": "#B3232E", "logo": "/logos/arizonawesterncollege.png" },
+  { "name": "Central Arizona College", "abbr": "CAC", "color": "#D4AF37", "logo": "/logos/centralarizonacollege.webp" },
+  { "name": "Chandler-Gilbert Community College", "abbr": "CGCC", "color": "#3CA35A", "logo": "/logos/chandler-gilbertcommunitycollege.webp" },
+  { "name": "Cisco College", "abbr": "CISCO", "color": "#C24343", "logo": "/logos/ciscocollege.png" },
+  { "name": "Cochise College", "abbr": "COCHISE", "color": "#2C3E50", "logo": "/logos/cochisecollege.png" },
+  { "name": "College of Southern Nevada", "abbr": "CSN", "color": "#8E44AD", "logo": "/logos/collegeofsourthernnevada.png" },
+  { "name": "Glendale Community College", "abbr": "GCC", "color": "#E67E22", "logo": "/logos/glendalecommunitycollege.webp" },
+  { "name": "IRISH Football Club", "abbr": "IRISH", "color": "#2E8B3D", "logo": "" },
+  { "name": "Justice University", "abbr": "JUSTICE", "color": "#3CB043", "logo": "/logos/justiceuniversity.png" },
+  { "name": "Mesa Community College", "abbr": "MESA", "color": "#7F8C8D", "logo": "/logos/mesacommunitycollege.png" },
+  { "name": "Mohave College", "abbr": "MOHAVE", "color": "#E74C3C", "logo": "/logos/mohavecollege.png" },
+  { "name": "Nelson University", "abbr": "NELSON", "color": "#2980B9", "logo": "/logos/nelsonuniversity.png" },
+  { "name": "Pima Community College", "abbr": "PIMA", "color": "#27AE60", "logo": "/logos/pimacommunitycollege.webp" },
+  { "name": "Scottsdale Community College", "abbr": "SCC", "color": "#D35400", "logo": "/logos/scottsdalecommunitycollege.webp" },
+  { "name": "Utah State Eastern", "abbr": "USUE", "color": "#34495E", "logo": "/logos/utahstateeastern.png" },
+  { "name": "Western Wyoming Community College", "abbr": "WWCC", "color": "#9B59B6", "logo": "/logos/westernwyomingcommunitycollege.png" },
+  { "name": "Yavapai College", "abbr": "YAVAPAI", "color": "#F39C12", "logo": "/logos/yavapaicollege.png" }
+]

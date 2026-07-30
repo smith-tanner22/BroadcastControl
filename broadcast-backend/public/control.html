@@ -17,6 +17,8 @@
   *{box-sizing:border-box;}
   html,body{margin:0;background:var(--bg);color:var(--white);font-family:var(--body);
     -webkit-tap-highlight-color:transparent;}
+  button{cursor:pointer;}
+  button:disabled{cursor:default;}
   body{padding:env(safe-area-inset-top) 14px calc(env(safe-area-inset-bottom) + 24px);
     max-width:520px;margin:0 auto;}
   @media (min-width:720px){
@@ -103,6 +105,27 @@
     background:transparent;color:var(--dim);font-family:var(--body);font-weight:600;font-size:13px;
     letter-spacing:1px;text-transform:uppercase;margin-top:2px;}
 
+  /* ---- Full reset (danger) ----
+     Deliberately louder than the plain Reset Scores button — this wipes
+     clock + every sport-specific field too, so it gets a filled red
+     treatment plus a confirm modal instead of firing on a single tap. */
+  .full-reset-btn{width:100%;height:48px;border-radius:10px;border:1px solid var(--red);
+    background:var(--red);color:#2a0808;font-family:var(--display);font-weight:800;font-size:14px;
+    letter-spacing:1px;text-transform:uppercase;margin-top:10px;}
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:none;
+    align-items:center;justify-content:center;z-index:200;padding:20px;}
+  .modal-overlay.show{display:flex;}
+  .modal-box{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:20px;max-width:360px;width:100%;}
+  .modal-title{font-family:var(--display);font-weight:800;font-size:20px;letter-spacing:0.5px;
+    color:var(--red);margin-bottom:8px;}
+  .modal-body{font-size:14px;line-height:1.5;color:var(--dim);margin-bottom:18px;}
+  .modal-actions{display:flex;gap:10px;}
+  .modal-btn{flex:1;height:46px;border-radius:10px;border:1px solid var(--line);
+    font-family:var(--display);font-weight:700;font-size:14px;letter-spacing:0.5px;text-transform:uppercase;}
+  .modal-btn.cancel{background:var(--panel-2);color:var(--white);}
+  .modal-btn.confirm{background:var(--red);color:#2a0808;border-color:var(--red);}
+
   .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
   .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
   .field{display:flex;flex-direction:column;gap:6px;}
@@ -125,10 +148,14 @@
   .preset-btn{flex:1;height:46px;border-radius:10px;border:1px solid var(--line);background:var(--panel);
     color:var(--white);font-family:var(--display);font-weight:700;font-size:15px;}
   .preset-btn.active{background:var(--gold);color:#1a1400;border-color:var(--gold);}
+  .preset-row.stacked-labels .preset-btn{height:56px;line-height:1.15;}
+  .preset-btn .sub{display:block;font-size:10px;font-weight:600;opacity:.7;
+    text-transform:none;letter-spacing:.3px;margin-top:2px;}
 
   .apply-btn{width:100%;height:48px;border-radius:10px;border:none;background:var(--gold);
     color:#1a1400;font-family:var(--display);font-weight:800;font-size:16px;letter-spacing:1px;
-    text-transform:uppercase;margin-top:12px;}
+    text-transform:uppercase;margin-top:12px;transition:background .15s ease, color .15s ease, opacity .15s ease;}
+  .apply-btn:disabled{background:var(--panel-2);color:var(--dim);opacity:0.7;}
 
   details{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:0;margin-bottom:14px;overflow:hidden;}
   summary{padding:14px 16px;font-family:var(--display);font-weight:700;font-size:16px;
@@ -156,6 +183,9 @@
   @media (min-width:720px){
     .clock-btn-row{grid-template-columns:repeat(4,1fr);}
   }
+  .clock-visibility-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;}
+  .clock-btn.vis.active{background:var(--gold);color:#1a1400;border-color:var(--gold);}
+  .clock-visibility-hint{font-size:12px;color:rgba(255,255,255,0.5);margin-top:8px;}
 
   /* ---- Stat cards (fouls / timeouts / sets won) ---- */
   .stat-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;
@@ -285,6 +315,7 @@
     </div>
   </div>
   <button class="reset-btn" id="resetScores">Reset Scores</button>
+  <button class="full-reset-btn" id="fullResetBtn">⟲ Full Reset (New Game)</button>
 </section>
 
 <!-- ============ SOCCER ============ -->
@@ -323,6 +354,11 @@
     <button class="clock-btn dir" id="clockDownBtn" data-dir="down">Count Down</button>
     <button class="clock-btn dir" id="clockUpBtn" data-dir="up">Count Up</button>
   </div>
+  <div class="clock-visibility-row">
+    <button class="clock-btn vis" id="clockShowBtn" data-visible="true">Show Clock</button>
+    <button class="clock-btn vis" id="clockHideBtn" data-visible="false">Hide Clock</button>
+  </div>
+  <div class="clock-visibility-hint">Hiding the clock swaps it for a bordered, transparent window inside the scorebug so the camera feed underneath (e.g. the venue's live scoreboard) shows through instead.</div>
 </section>
 
 <section data-sport-section="basketball" class="pri-secondary-stats">
@@ -441,10 +477,14 @@
 
 <section class="pri-break">
   <div class="section-label" id="intermissionLabel">Intermission Timer</div>
-  <div class="preset-row">
+  <div class="preset-row" data-sport-preset="soccer basketball baseball softball">
     <button class="preset-btn" data-seconds="900">15:00</button>
     <button class="preset-btn" data-seconds="600">10:00</button>
     <button class="preset-btn" data-seconds="300">5:00</button>
+  </div>
+  <div class="preset-row stacked-labels" data-sport-preset="volleyball">
+    <button class="preset-btn" data-seconds="180">3:00<span class="sub">Between Sets</span></button>
+    <button class="preset-btn" data-seconds="75">1:15<span class="sub">Timeout</span></button>
   </div>
   <div class="custom-timer-row">
     <input type="text" id="customTimerInput" placeholder="mm:ss">
@@ -455,9 +495,20 @@
 <details class="pri-team-setup">
   <summary>Team Setup</summary>
   <div class="details-body">
+    <div class="field">
+      <label>Away Opponent</label>
+      <select id="awayTeamSelect">
+        <option value="">— Select opponent —</option>
+        <option value="__custom__">Custom / Other…</option>
+      </select>
+    </div>
     <div class="row2">
-      <div class="field"><label>Home Name</label><input type="text" id="homeName"></div>
-      <div class="field"><label>Away Name</label><input type="text" id="awayName"></div>
+      <div class="field"><label>Home Abbreviation</label><input type="text" id="homeName"></div>
+      <div class="field"><label>Away Abbreviation</label><input type="text" id="awayName"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Home Full Name</label><input type="text" id="homeFullName"></div>
+      <div class="field"><label>Away Full Name</label><input type="text" id="awayFullName"></div>
     </div>
     <div class="row2">
       <div class="field"><label>Home Color</label>
@@ -475,9 +526,26 @@
         <div class="palette-row" id="awayPalette"></div>
       </div>
     </div>
+    <!-- Home logo is permanently EAC's crest; away logo comes from the roster
+         pick (teams.json) or stays blank for a Custom opponent — neither is
+         ever hand-typed, so there's no visible field, just a value carried
+         through to the save payload. -->
+    <input type="hidden" id="awayLogo" value="">
     <div class="row2">
-      <div class="field"><label>Home Logo URL</label><input type="url" id="homeLogo" placeholder="https://..."></div>
-      <div class="field"><label>Away Logo URL</label><input type="url" id="awayLogo" placeholder="https://..."></div>
+      <div class="field"><label>Home Logo Background</label>
+        <div class="preset-row">
+          <button class="preset-btn logo-bg-btn" data-side="home" data-bg="#FFFFFF">White</button>
+          <button class="preset-btn logo-bg-btn" data-side="home" data-bg="#000000">Black</button>
+        </div>
+        <input type="hidden" id="homeLogoBg" value="#FFFFFF">
+      </div>
+      <div class="field"><label>Away Logo Background</label>
+        <div class="preset-row">
+          <button class="preset-btn logo-bg-btn" data-side="away" data-bg="#FFFFFF">White</button>
+          <button class="preset-btn logo-bg-btn" data-side="away" data-bg="#000000">Black</button>
+        </div>
+        <input type="hidden" id="awayLogoBg" value="#FFFFFF">
+      </div>
     </div>
     <div class="row2">
       <div class="field"><label>Home Record</label><input type="text" id="homeRecord" placeholder="8-2"></div>
@@ -535,6 +603,21 @@
 
 </div>
 
+<div class="modal-overlay" id="fullResetModal">
+  <div class="modal-box">
+    <div class="modal-title">Full Reset?</div>
+    <div class="modal-body">
+      This clears the score, clock, and all <strong id="fullResetSportName">Soccer</strong> game state
+      (half/quarter, fouls, timeouts, sets, count, runners — whatever applies). Team names, colors, and
+      logos are kept.
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" id="fullResetCancelBtn">Cancel</button>
+      <button class="modal-btn confirm" id="fullResetConfirmBtn">Reset Everything</button>
+    </div>
+  </div>
+</div>
+
 <script>
   let latestState = null;
   let ws;
@@ -589,18 +672,40 @@
     el.classList.toggle('running', s.clockRunning);
     document.getElementById('clockDownBtn').classList.toggle('active', s.clockDirection === 'down');
     document.getElementById('clockUpBtn').classList.toggle('active', s.clockDirection === 'up');
+    document.getElementById('clockShowBtn').classList.toggle('active', s.clockVisible !== false);
+    document.getElementById('clockHideBtn').classList.toggle('active', s.clockVisible === false);
     // Mirror the live value into the editable field too, so the operator can
     // see the running time and nudge it without hunting for the big display —
     // but don't fight them while they're actively typing a correction.
     if(document.activeElement.id !== 'clockInput') document.getElementById('clockInput').value = display;
   }
-  setInterval(() => { if(latestState) renderClock(latestState); }, 250);
+  // A preset (3:00, 15:00, etc.) is just an arming choice, same as the
+  // Half/Quarter/Set rows — it stays highlighted once picked regardless of
+  // scene switches, so "Set Break" always knows which duration to (re)start
+  // at. It's independent of whether a countdown happens to be running.
+  function renderIntermissionPresets(s){
+    document.querySelectorAll('[data-seconds]').forEach(b => {
+      b.classList.toggle('active', parseInt(b.dataset.seconds, 10) === s.intermissionSelectedSeconds);
+    });
+  }
+  // Mirror the live break countdown into the custom-timer field, same trick
+  // as the game clock input — lets the operator see the running time and
+  // just click in to nudge it by a few seconds instead of retyping it whole.
+  function renderCustomTimerInput(s){
+    if(document.activeElement.id === 'customTimerInput') return;
+    const remaining = s.halftimeEndsAt ? Math.max(0, (s.halftimeEndsAt - Date.now()) / 1000) : 0;
+    document.getElementById('customTimerInput').value = fmtClock(remaining);
+  }
+  setInterval(() => { if(latestState){ renderClock(latestState); renderCustomTimerInput(latestState); } }, 250);
 
   function render(s){
     document.querySelectorAll('.sport-tab').forEach(b => b.classList.toggle('active', b.dataset.sport === s.sport));
     document.querySelectorAll('[data-sport-section]').forEach(el => {
       const shown = el.dataset.sportSection.split(' ').includes(s.sport);
       el.style.display = shown ? (el.dataset.showDisplay || 'block') : 'none';
+    });
+    document.querySelectorAll('[data-sport-preset]').forEach(el => {
+      el.style.display = el.dataset.sportPreset.split(' ').includes(s.sport) ? 'flex' : 'none';
     });
 
     document.getElementById('halftimeModeBtn').textContent = HALFTIME_BTN_LABELS[s.sport];
@@ -618,7 +723,8 @@
     document.querySelectorAll('#halfRow .preset-btn').forEach(b => b.classList.toggle('active', b.dataset.half === s.half));
     document.querySelectorAll('#quarterRow .preset-btn').forEach(b => b.classList.toggle('active', b.dataset.quarter === s.quarter));
     document.querySelectorAll('#setRow .preset-btn').forEach(b => b.classList.toggle('active', parseInt(b.dataset.set,10) === s.volleyballSet));
-    document.querySelectorAll('[data-seconds]').forEach(b => b.classList.toggle('active', false));
+    renderIntermissionPresets(s);
+    renderCustomTimerInput(s);
 
     renderClock(s);
 
@@ -651,14 +757,18 @@
     document.getElementById('awayColorPreview').style.background = s.awayColor;
     markSelectedSwatch('homePalette', s.homeColor);
     markSelectedSwatch('awayPalette', s.awayColor);
+    syncAwayTeamSelect(s);
+
+    syncLogoBgButtons(s);
 
     // only fill the setup forms once per field (don't fight the operator mid-typing)
     if(document.activeElement.id !== 'homeName') document.getElementById('homeName').value = s.home;
     if(document.activeElement.id !== 'awayName') document.getElementById('awayName').value = s.away;
+    if(document.activeElement.id !== 'homeFullName') document.getElementById('homeFullName').value = s.homeFullName || '';
+    if(document.activeElement.id !== 'awayFullName') document.getElementById('awayFullName').value = s.awayFullName || '';
     if(document.activeElement.id !== 'homeColor') document.getElementById('homeColor').value = s.homeColor;
     if(document.activeElement.id !== 'awayColor') document.getElementById('awayColor').value = s.awayColor;
-    if(document.activeElement.id !== 'homeLogo') document.getElementById('homeLogo').value = s.homeLogo || '';
-    if(document.activeElement.id !== 'awayLogo') document.getElementById('awayLogo').value = s.awayLogo || '';
+    document.getElementById('awayLogo').value = s.awayLogo || '';
     if(document.activeElement.id !== 'homeRecord') document.getElementById('homeRecord').value = s.homeRecord;
     if(document.activeElement.id !== 'awayRecord') document.getElementById('awayRecord').value = s.awayRecord;
     if(document.activeElement.id !== 'league') document.getElementById('league').value = s.league;
@@ -689,6 +799,48 @@
 
   document.getElementById('resetScores').addEventListener('click', () => send({ type: 'RESET_SCORES' }));
 
+  const SPORT_NAMES = { soccer:'Soccer', basketball:'Basketball', volleyball:'Volleyball', baseball:'Baseball', softball:'Softball' };
+  document.getElementById('fullResetBtn').addEventListener('click', () => {
+    const sport = latestState ? latestState.sport : 'soccer';
+    document.getElementById('fullResetSportName').textContent = SPORT_NAMES[sport] || sport;
+    document.getElementById('fullResetModal').classList.add('show');
+  });
+  document.getElementById('fullResetCancelBtn').addEventListener('click', () => {
+    document.getElementById('fullResetModal').classList.remove('show');
+  });
+  document.getElementById('fullResetConfirmBtn').addEventListener('click', () => {
+    send({ type: 'FULL_RESET', sport: latestState ? latestState.sport : undefined });
+    document.getElementById('fullResetModal').classList.remove('show');
+  });
+
+  // Logo background is part of the Team Setup form, same as the other
+  // fields — picking White/Black only stages the value (hidden input +
+  // highlight) until "Save Team Info" is pressed. `logoBgDirty` blocks the
+  // render()-driven sync from a state broadcast clobbering that pending
+  // pick before it's saved (buttons have no "activeElement" to check like
+  // text inputs do, so this flag stands in for that).
+  const logoBgDirty = { home: false, away: false };
+  function syncLogoBgButtons(s){
+    ['home', 'away'].forEach(side => {
+      if(logoBgDirty[side]) return;
+      const val = (side === 'home' ? s.homeLogoBg : s.awayLogoBg) || '#FFFFFF';
+      document.getElementById(side + 'LogoBg').value = val;
+      document.querySelectorAll('.logo-bg-btn[data-side="' + side + '"]').forEach(b => {
+        b.classList.toggle('active', b.dataset.bg.toLowerCase() === val.toLowerCase());
+      });
+    });
+  }
+  document.querySelectorAll('.logo-bg-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const side = btn.dataset.side;
+      logoBgDirty[side] = true;
+      const hidden = document.getElementById(side + 'LogoBg');
+      hidden.value = btn.dataset.bg;
+      document.querySelectorAll('.logo-bg-btn[data-side="' + side + '"]').forEach(b => b.classList.toggle('active', b === btn));
+      hidden.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  });
+
   document.querySelectorAll('#halfRow .preset-btn').forEach(btn => {
     btn.addEventListener('click', () => send({ type: 'SET_HALF', text: btn.dataset.half }));
   });
@@ -709,6 +861,8 @@
   document.getElementById('clockPauseBtn').addEventListener('click', () => send({ type: 'PAUSE_CLOCK' }));
   document.getElementById('clockDownBtn').addEventListener('click', () => send({ type: 'SET_CLOCK_DIRECTION', direction: 'down' }));
   document.getElementById('clockUpBtn').addEventListener('click', () => send({ type: 'SET_CLOCK_DIRECTION', direction: 'up' }));
+  document.getElementById('clockShowBtn').addEventListener('click', () => send({ type: 'SET_CLOCK_VISIBLE', visible: true }));
+  document.getElementById('clockHideBtn').addEventListener('click', () => send({ type: 'SET_CLOCK_VISIBLE', visible: false }));
 
   document.querySelectorAll('[data-action="foul"]').forEach(btn => {
     btn.addEventListener('click', () => send({ type: 'FOUL_DELTA', side: btn.dataset.side, delta: parseInt(btn.dataset.delta, 10) }));
@@ -739,8 +893,13 @@
   document.getElementById('outBtn').addEventListener('click', () => send({ type: 'OUT_DELTA', delta: 1 }));
   document.getElementById('resetCountBtn').addEventListener('click', () => send({ type: 'BB_RESET_COUNT' }));
 
+  // Presets only arm a duration (highlighting it) — the countdown itself
+  // starts when the operator taps the halftime/"Set Break" live-scene
+  // button, so a single tap both goes live and starts the clock. If the
+  // break scene is already live, picking a different preset restarts the
+  // countdown immediately instead of waiting for another scene tap.
   document.querySelectorAll('[data-seconds]').forEach(btn => {
-    btn.addEventListener('click', () => send({ type: 'START_HALFTIME_TIMER', seconds: parseInt(btn.dataset.seconds, 10) }));
+    btn.addEventListener('click', () => send({ type: 'SELECT_INTERMISSION_TIMER', seconds: parseInt(btn.dataset.seconds, 10) }));
   });
   document.getElementById('customTimerBtn').addEventListener('click', () => {
     const seconds = parseClock(document.getElementById('customTimerInput').value);
@@ -751,20 +910,35 @@
     btn.addEventListener('click', () => send({ type: 'TOGGLE_BASE', base: btn.dataset.base }));
   });
 
-  const COLOR_PALETTE = [
-    '#1F5FAE', '#B3232E', '#D4AF37', '#3CA35A', '#C24343', '#2C3E50',
-    '#8E44AD', '#E67E22', '#16A085', '#F1C40F', '#000000', '#FFFFFF'
+  // EAC only ever wears its own colors, so the home swatches are just those
+  // — including the pink used for breast cancer awareness games — instead
+  // of the full opponent-oriented palette.
+  const HOME_COLOR_PALETTE = [
+    '#4B1E78', // Purple (default)
+    '#D4AF37', // Gold
+    '#000000', // Black
+    '#FFFFFF', // White
+    '#FF69B4'  // Pink (breast cancer awareness)
   ];
-  function buildPalette(containerId, inputId, previewId){
+  const AWAY_COLOR_PALETTE = [
+    '#1F5FAE', '#3498DB', '#1B2A4A', '#16A085', '#008080',
+    '#3CA35A', '#7CB518', '#6B8E23', '#F1C40F', '#D4AF37',
+    '#E67E22', '#C24343', '#B3232E', '#DC143C', '#5C1A1B',
+    '#8E44AD', '#4B0082', '#E91E8C', '#6D4C41', '#2C3E50',
+    '#7F8C8D', '#000000', '#FFFFFF'
+  ];
+  function buildPalette(containerId, inputId, previewId, palette){
     const container = document.getElementById(containerId);
-    COLOR_PALETTE.forEach(hex => {
+    palette.forEach(hex => {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'palette-swatch';
       btn.dataset.hex = hex;
       btn.style.background = hex;
       btn.addEventListener('click', () => {
-        document.getElementById(inputId).value = hex;
+        const input = document.getElementById(inputId);
+        input.value = hex;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
         document.getElementById(previewId).style.background = hex;
         markSelectedSwatch(containerId, hex);
       });
@@ -776,8 +950,58 @@
       btn.classList.toggle('selected', btn.dataset.hex.toLowerCase() === (hex || '').toLowerCase());
     });
   }
-  buildPalette('homePalette', 'homeColor', 'homeColorPreview');
-  buildPalette('awayPalette', 'awayColor', 'awayColorPreview');
+  buildPalette('homePalette', 'homeColor', 'homeColorPreview', HOME_COLOR_PALETTE);
+  buildPalette('awayPalette', 'awayColor', 'awayColorPreview', AWAY_COLOR_PALETTE);
+
+  // Opponent roster — edit /teams.json to add/change teams, no code changes needed.
+  let AWAY_TEAMS = [];
+  fetch('/teams.json').then(r => r.json()).then(teams => {
+    AWAY_TEAMS = teams;
+    const sel = document.getElementById('awayTeamSelect');
+    teams.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.abbr;
+      opt.textContent = t.name;
+      sel.appendChild(opt);
+    });
+    if(latestState) syncAwayTeamSelect(latestState);
+  }).catch(() => {});
+
+  // Name/full name stay tied to the roster pick (edit teams.json if they're
+  // wrong; logo isn't a visible field at all anymore, same reasoning), but
+  // color is always left editable — a one-off shade tweak for a given game
+  // shouldn't require dropping to "Custom / Other…" and losing the roster
+  // link.
+  function setAwayFieldsLocked(locked){
+    ['awayName', 'awayFullName'].forEach(id => {
+      document.getElementById(id).toggleAttribute('readonly', locked);
+    });
+  }
+
+  function syncAwayTeamSelect(s){
+    const sel = document.getElementById('awayTeamSelect');
+    if(document.activeElement === sel) return;
+    const match = AWAY_TEAMS.find(t => t.abbr === s.away);
+    sel.value = match ? match.abbr : '__custom__';
+    setAwayFieldsLocked(!!match);
+  }
+
+  document.getElementById('awayTeamSelect').addEventListener('change', (e) => {
+    const val = e.target.value;
+    if(val === '__custom__' || val === ''){
+      setAwayFieldsLocked(false);
+      return;
+    }
+    const team = AWAY_TEAMS.find(t => t.abbr === val);
+    if(!team) return;
+    document.getElementById('awayName').value = team.abbr;
+    document.getElementById('awayFullName').value = team.name;
+    document.getElementById('awayColor').value = team.color;
+    document.getElementById('awayColorPreview').style.background = team.color;
+    markSelectedSwatch('awayPalette', team.color);
+    document.getElementById('awayLogo').value = team.logo || '';
+    setAwayFieldsLocked(true);
+  });
   document.getElementById('homeColor').addEventListener('input', (e) => {
     document.getElementById('homeColorPreview').style.background = e.target.value;
     markSelectedSwatch('homePalette', e.target.value);
@@ -787,16 +1011,49 @@
     markSelectedSwatch('awayPalette', e.target.value);
   });
 
+  // Save buttons otherwise give no feedback that the click landed — grey out
+  // and relabel on save, then pop back to normal the moment any watched
+  // field changes again, so "greyed out" reads as "saved, nothing pending".
+  function makeSaveFeedback(btn, fieldIds){
+    const defaultLabel = btn.textContent;
+    function reset(){
+      if(!btn.disabled) return;
+      btn.disabled = false;
+      btn.textContent = defaultLabel;
+    }
+    fieldIds.forEach(id => {
+      const el = document.getElementById(id);
+      el.addEventListener('input', reset);
+      el.addEventListener('change', reset);
+    });
+    return function markSaved(){
+      btn.disabled = true;
+      btn.textContent = 'Saved ✓';
+    };
+  }
+
+  const markTeamsSaved = makeSaveFeedback(document.getElementById('saveTeams'), [
+    'homeName', 'awayName', 'homeFullName', 'awayFullName', 'homeColor', 'awayColor',
+    'homeLogoBg', 'awayLogoBg', 'homeRecord', 'awayRecord',
+    'league', 'event', 'kickoff', 'awayTeamSelect'
+  ]);
+  const markBreakSaved = makeSaveFeedback(document.getElementById('saveBreak'), [
+    'breakMode', 'breakTitle', 'sponsor', 'sponsorTag', 'footer', 'qr'
+  ]);
+
   document.getElementById('saveTeams').addEventListener('click', () => {
     send({
       type: 'UPDATE_TEAMS',
       data: {
         home: document.getElementById('homeName').value || 'HOME',
         away: document.getElementById('awayName').value || 'AWAY',
+        homeFullName: document.getElementById('homeFullName').value,
+        awayFullName: document.getElementById('awayFullName').value,
         homeColor: document.getElementById('homeColor').value,
         awayColor: document.getElementById('awayColor').value,
-        homeLogo: document.getElementById('homeLogo').value,
         awayLogo: document.getElementById('awayLogo').value,
+        homeLogoBg: document.getElementById('homeLogoBg').value,
+        awayLogoBg: document.getElementById('awayLogoBg').value,
         homeRecord: document.getElementById('homeRecord').value,
         awayRecord: document.getElementById('awayRecord').value,
         league: document.getElementById('league').value,
@@ -804,6 +1061,9 @@
         kickoff: document.getElementById('kickoff').value
       }
     });
+    logoBgDirty.home = false;
+    logoBgDirty.away = false;
+    markTeamsSaved();
   });
 
   document.getElementById('saveBreak').addEventListener('click', () => {
@@ -818,6 +1078,7 @@
         qr: document.getElementById('qr').value
       }
     });
+    markBreakSaved();
   });
 
   // ---------------- Scorebug layout editor ----------------

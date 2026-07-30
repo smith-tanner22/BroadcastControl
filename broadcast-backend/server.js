@@ -17,12 +17,24 @@ app.use(express.static(path.join(__dirname, 'public')));
 let state = {
   sport: 'soccer', // soccer | basketball | volleyball | baseball | softball
   mode: 'off', // off | scorebug | matchup | halftime | break
-  home: 'HOME',
+  // EAC is always the home side, so its identity is baked in as the default
+  // here instead of being typed into the control panel every gameday.
+  home: 'EAC',
   away: 'AWAY',
-  homeColor: '#1F5FAE',
+  // Full names shown as small text under the big abbreviation in the
+  // scorebug, so long opponent names don't force the abbreviation to shrink
+  // or the two sides of the bug to go lopsided.
+  homeFullName: 'Eastern Arizona College',
+  awayFullName: '',
+  homeColor: '#4B1E78', // EAC purple — adjust to match brand exactly if needed
   awayColor: '#B3232E',
-  homeLogo: '',
+  homeLogo: '/logos/eac.png',
   awayLogo: '',
+  // Crest badge backing behind a logo image — a plain white or black matte
+  // reads far better than the team color, which fights with whatever's in
+  // the logo itself. Operator-toggleable per side in the control panel.
+  homeLogoBg: '#FFFFFF',
+  awayLogoBg: '#FFFFFF',
   homeScore: 0,
   awayScore: 0,
   league: 'SRV Conference',
@@ -39,6 +51,10 @@ let state = {
   clockRunning: false,
   clockAnchorMs: null, // server epoch ms when the clock was last (re)started
   clockDirection: 'down', // 'down' | 'up'
+  // When false, the overlay hides the clock readout and shows an empty
+  // placeholder in its place instead — for games where we point a camera at
+  // the venue's physical scoreboard rather than keeping our own clock.
+  clockVisible: true,
 
   // Soccer
   half: '1st Half',
@@ -71,11 +87,22 @@ let state = {
 
   // Halftime/intermission countdown, same fixed-end-time trick as the clock.
   halftimeEndsAt: null, // epoch ms
+  // Which timer preset is currently armed (e.g. 180 for volleyball's 3:00
+  // between-sets break, or 75 for a 1:15 timeout). Tapping the halftime/
+  // "Set Break" live-scene button (re)starts halftimeEndsAt from this value,
+  // so a single tap both cuts to the break scene and starts its countdown.
+  intermissionSelectedSeconds: null,
 
   // Scorebug position/size on the overlay canvas, adjustable via the overlay
   // page's own edit mode. x/y are pixel offsets from the default centered
   // position; scale is a uniform multiplier. {0,0,1} reproduces the default.
   scorebugLayout: { x: 0, y: 0, scale: 1 }
+};
+
+// Fallback timer length when the halftime/"Set Break" scene is cut to
+// without an explicit preset armed first (e.g. right after switching sport).
+const DEFAULT_INTERMISSION_SECONDS = {
+  soccer: 900, basketball: 900, volleyball: 180, baseball: 900, softball: 900
 };
 
 function broadcastState() {
@@ -129,6 +156,15 @@ function applyAction(action) {
 
     case 'SET_MODE':
       state.mode = action.mode;
+      // Cutting to the halftime/"Set Break" scene (re)starts its countdown
+      // from whatever preset is armed, every time — so the operator never
+      // has to separately start a timer, and re-tapping the scene button
+      // (e.g. for the next set's break) always resets the clock.
+      if (action.mode === 'halftime') {
+        const seconds = state.intermissionSelectedSeconds || DEFAULT_INTERMISSION_SECONDS[state.sport] || 900;
+        state.intermissionSelectedSeconds = seconds;
+        state.halftimeEndsAt = Date.now() + seconds * 1000;
+      }
       break;
 
     case 'SCORE_DELTA': {
@@ -142,6 +178,42 @@ function applyAction(action) {
       state.homeScore = 0;
       state.awayScore = 0;
       break;
+
+    // Full game reset — for back-to-back games on the same sport. Clears
+    // score, clock, and every sport-specific in-game field, but leaves team
+    // identity (names/colors/logos/records) and league/event info alone
+    // since those usually carry over or get set once per broadcast.
+    case 'FULL_RESET': {
+      const sport = action.sport || state.sport;
+
+      state.homeScore = 0;
+      state.awayScore = 0;
+
+      state.clockSeconds = 0;
+      state.clockRunning = false;
+      state.clockAnchorMs = null;
+      state.clockDirection = 'down';
+
+      if (sport === 'soccer') {
+        state.half = '1st Half';
+      } else if (sport === 'basketball') {
+        state.quarter = 'Q1';
+        state.fouls = { home: 0, away: 0 };
+        state.timeouts = { home: 5, away: 5 };
+      } else if (sport === 'volleyball') {
+        state.volleyballSet = 1;
+        state.setsWon = { home: 0, away: 0 };
+        state.servingSide = 'home';
+      } else if (sport === 'baseball' || sport === 'softball') {
+        state.inning = 1;
+        state.inningHalf = 'Top';
+        state.outs = 0;
+        state.balls = 0;
+        state.strikes = 0;
+        state.bases = { first: false, second: false, third: false };
+      }
+      break;
+    }
 
     // ---------------- Game clock (soccer + basketball) ----------------
     case 'SET_CLOCK':
@@ -173,12 +245,28 @@ function applyAction(action) {
       if (state.clockRunning) state.clockAnchorMs = Date.now();
       break;
 
+    case 'SET_CLOCK_VISIBLE':
+      state.clockVisible = !!action.visible;
+      break;
+
     case 'SET_HALF':
       state.half = action.text;
       break;
 
     case 'START_HALFTIME_TIMER':
       state.halftimeEndsAt = Date.now() + action.seconds * 1000;
+      // Keep the preset highlight in sync: a custom duration shouldn't leave
+      // a stale preset button lit up as if it were the one running.
+      state.intermissionSelectedSeconds = Math.max(1, Math.round(action.seconds));
+      break;
+
+    case 'SELECT_INTERMISSION_TIMER':
+      state.intermissionSelectedSeconds = Math.max(1, Math.round(action.seconds));
+      // If the break scene is already live, switching presets should restart
+      // the on-air countdown right away rather than waiting for another tap.
+      if (state.mode === 'halftime') {
+        state.halftimeEndsAt = Date.now() + state.intermissionSelectedSeconds * 1000;
+      }
       break;
 
     // ---------------- Basketball ----------------
