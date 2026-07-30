@@ -1,3 +1,7 @@
+# URLs
+Overlay: https://eac-broadcast-control.onrender.com/overlay.html
+Control: https://eac-broadcast-control.onrender.com/control.html
+
 # Broadcast Control — Backend
 
 Shared state server for the soccer overlay + control panel. One `mode` lives on
