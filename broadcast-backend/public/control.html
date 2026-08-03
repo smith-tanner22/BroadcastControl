@@ -173,16 +173,13 @@
     text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;
     padding:14px 0;margin-bottom:12px;}
   .clock-display.running{color:var(--gold);}
-  .clock-btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;}
+  .clock-btn-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px;}
   .clock-btn{height:48px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);
     color:var(--white);font-family:var(--display);font-weight:700;font-size:15px;letter-spacing:1px;
     text-transform:uppercase;}
+  .clock-btn-row .clock-btn{height:76px;font-size:22px;}
   .clock-btn.start{background:var(--green);color:#08210f;border-color:var(--green);}
   .clock-btn.pause{background:var(--red);color:#2a0808;border-color:var(--red);}
-  .clock-btn.dir.active{background:var(--gold);color:#1a1400;border-color:var(--gold);}
-  @media (min-width:720px){
-    .clock-btn-row{grid-template-columns:repeat(4,1fr);}
-  }
   .clock-visibility-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;}
   .clock-btn.vis.active{background:var(--gold);color:#1a1400;border-color:var(--gold);}
   .clock-visibility-hint{font-size:12px;color:rgba(255,255,255,0.5);margin-top:8px;}
@@ -314,8 +311,6 @@
       </div>
     </div>
   </div>
-  <button class="reset-btn" id="resetScores">Reset Scores</button>
-  <button class="full-reset-btn" id="fullResetBtn">⟲ Full Reset (New Game)</button>
 </section>
 
 <!-- ============ SOCCER ============ -->
@@ -351,8 +346,6 @@
   <div class="clock-btn-row">
     <button class="clock-btn start" id="clockStartBtn">▶ Start</button>
     <button class="clock-btn pause" id="clockPauseBtn">⏸ Pause</button>
-    <button class="clock-btn dir" id="clockDownBtn" data-dir="down">Count Down</button>
-    <button class="clock-btn dir" id="clockUpBtn" data-dir="up">Count Up</button>
   </div>
   <div class="clock-visibility-row">
     <button class="clock-btn vis" id="clockShowBtn" data-visible="true">Show Clock</button>
@@ -473,6 +466,12 @@
       <div class="home-plate"></div>
     </div>
   </div>
+</section>
+
+<!-- ============ RESET (bottom of column 1) ============ -->
+<section class="pri-reset">
+  <button class="reset-btn" id="resetScores">Reset Scores</button>
+  <button class="full-reset-btn" id="fullResetBtn">⟲ Full Reset (New Game)</button>
 </section>
 
 <section class="pri-break">
@@ -670,8 +669,6 @@
     const display = fmtClock(currentClockSeconds(s));
     el.textContent = display;
     el.classList.toggle('running', s.clockRunning);
-    document.getElementById('clockDownBtn').classList.toggle('active', s.clockDirection === 'down');
-    document.getElementById('clockUpBtn').classList.toggle('active', s.clockDirection === 'up');
     document.getElementById('clockShowBtn').classList.toggle('active', s.clockVisible !== false);
     document.getElementById('clockHideBtn').classList.toggle('active', s.clockVisible === false);
     // Mirror the live value into the editable field too, so the operator can
@@ -859,8 +856,6 @@
   });
   document.getElementById('clockStartBtn').addEventListener('click', () => send({ type: 'START_CLOCK' }));
   document.getElementById('clockPauseBtn').addEventListener('click', () => send({ type: 'PAUSE_CLOCK' }));
-  document.getElementById('clockDownBtn').addEventListener('click', () => send({ type: 'SET_CLOCK_DIRECTION', direction: 'down' }));
-  document.getElementById('clockUpBtn').addEventListener('click', () => send({ type: 'SET_CLOCK_DIRECTION', direction: 'up' }));
   document.getElementById('clockShowBtn').addEventListener('click', () => send({ type: 'SET_CLOCK_VISIBLE', visible: true }));
   document.getElementById('clockHideBtn').addEventListener('click', () => send({ type: 'SET_CLOCK_VISIBLE', visible: false }));
 
@@ -1235,7 +1230,7 @@
   // (set/sets-won/serving, or inning/count/runners) takes that slot instead
   // — otherwise column 1 would sit mostly empty for those sports while
   // column 2 carried everything.
-  const dashColASelectors = ['.pri-setup', '.pri-score', '.pri-clock', '.pri-col1-sport'];
+  const dashColASelectors = ['.pri-setup', '.pri-score', '.pri-clock', '.pri-col1-sport', '.pri-reset'];
   const dashColBSelectors = ['.pri-primary-stats', '.pri-secondary-stats', '.pri-scene', '.pri-break',
     '.pri-team-setup', '.pri-break-setup', '.pri-layout-setup'];
 
