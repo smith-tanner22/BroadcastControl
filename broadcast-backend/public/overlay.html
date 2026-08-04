@@ -182,15 +182,9 @@
   .footer{margin-top:26px;font-family:var(--body);font-weight:600;font-size:14px;letter-spacing:2px;
     color:rgba(255,255,255,0.5);text-transform:uppercase;}
 
-  /* connection indicator — tiny, corner, only matters to the operator watching a preview */
-  #conn{position:absolute;top:16px;left:16px;font-family:var(--body);font-size:12px;
-    color:rgba(255,255,255,0.4);letter-spacing:1px;}
-  #conn.live{color:#4CD97B;}
-  #conn.down{color:#D95757;}
 </style>
 </head>
 <body>
-  <div id="conn">connecting…</div>
 
   <div class="scene" id="scene-scorebug">
     <div class="stage">
@@ -505,10 +499,8 @@
   function connect(){
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
     const ws = new WebSocket(`${proto}//${location.host}`);
-    const conn = document.getElementById('conn');
 
-    ws.onopen = () => { conn.textContent = 'live'; conn.className = 'live'; };
-    ws.onclose = () => { conn.textContent = 'reconnecting…'; conn.className = 'down'; setTimeout(connect, 1500); };
+    ws.onclose = () => setTimeout(connect, 1500);
     ws.onerror = () => ws.close();
 
     ws.onmessage = (msg) => {
