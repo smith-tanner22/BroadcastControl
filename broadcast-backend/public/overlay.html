@@ -99,6 +99,21 @@
   .extra-sm{font-family:var(--body);font-weight:600;font-size:12px;color:var(--gold);
     text-transform:uppercase;letter-spacing:1px;margin-top:4px;display:none;}
   .extra-sm.show{display:block;}
+
+  /* Volleyball mini box score — one cell per set played so far (plus the
+     live in-progress one), stacked home-over-away like the main scorebug's
+     team order. Lets someone tuning in mid-match see who took the earlier
+     sets without needing the bigger Set Recap scene. */
+  .vb-box-row{display:none;gap:4px;margin-top:8px;}
+  .vb-box-row.show{display:flex;}
+  .vb-box-cell{display:flex;flex-direction:column;width:30px;border:1px solid var(--line);
+    border-radius:3px;overflow:hidden;background:rgba(0,0,0,0.25);}
+  .vb-box-cell.current{border-color:var(--gold);}
+  .vb-box-num{font-family:var(--display);font-weight:700;font-size:13px;line-height:16px;
+    text-align:center;color:var(--white);border-left:3px solid transparent;}
+  .vb-box-num.home{border-bottom:1px solid var(--line);border-left-color:var(--home-color);}
+  .vb-box-num.away{border-left-color:var(--away-color);}
+  .vb-box-num.win{color:var(--gold);}
   .mini-diamond{position:relative;width:80px;height:80px;margin:8px 0 2px;display:none;}
   .mini-diamond.show{display:block;}
   .mini-diamond .mbase{position:absolute;width:22px;height:22px;border-radius:3px;border:1px solid var(--line);
@@ -123,6 +138,9 @@
   #scene-matchup .card{width:1180px;padding:52px 60px 44px;}
   .eyebrow{font-family:var(--display);font-weight:700;font-size:20px;letter-spacing:6px;
     color:var(--gold);text-transform:uppercase;margin-bottom:6px;}
+  .division-line{font-family:var(--body);font-weight:600;font-size:13px;color:rgba(255,255,255,0.45);
+    letter-spacing:2px;text-transform:uppercase;margin:4px 0 10px;}
+  .division-line:empty{display:none;}
   .event-line{font-family:var(--body);font-weight:600;font-size:16px;color:rgba(255,255,255,0.6);
     letter-spacing:2px;text-transform:uppercase;margin-bottom:36px;}
   .row{display:flex;align-items:center;justify-content:center;gap:56px;width:100%;}
@@ -168,6 +186,40 @@
     color:rgba(255,255,255,0.55);text-transform:uppercase;}
   .timer{font-family:var(--display);font-weight:800;font-size:34px;color:var(--gold);margin-top:6px;}
 
+  /* ---------- VOLLEYBALL SET RECAP ---------- */
+  #scene-vb-recap .card{width:1520px;padding:48px 64px 40px;}
+  .vb-recap-tag{font-family:var(--display);font-weight:700;font-size:20px;letter-spacing:6px;
+    color:var(--gold);text-transform:uppercase;margin-bottom:8px;}
+  .vb-recap-event{font-family:var(--display);font-weight:800;font-size:38px;color:var(--white);
+    text-transform:uppercase;letter-spacing:1px;text-align:center;}
+  .vb-recap-sub{font-family:var(--body);font-weight:600;font-size:15px;color:rgba(255,255,255,0.55);
+    letter-spacing:2px;text-transform:uppercase;text-align:center;margin-top:6px;margin-bottom:30px;}
+  .vb-table{display:flex;flex-direction:column;width:100%;}
+  .vb-header-row,.vb-team-row{display:grid;grid-template-columns:1fr 130px repeat(5,104px);align-items:center;width:100%;}
+  .vb-header-row{padding-bottom:12px;border-bottom:1px solid var(--line);}
+  .vb-header-row > div,.vb-team-row > div{text-align:center;}
+  .vb-header-row .vb-col-team,.vb-team-row .vb-col-team{text-align:left;}
+  .vb-header-label{font-family:var(--body);font-weight:600;font-size:12px;color:rgba(255,255,255,0.45);
+    letter-spacing:2px;text-transform:uppercase;}
+  .vb-team-row{padding:20px 0;border-bottom:1px solid var(--line);}
+  .vb-col-team{display:flex;align-items:center;gap:20px;min-width:0;}
+  .vb-crest{width:68px;height:68px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-family:var(--display);font-weight:800;font-size:26px;color:var(--white);border:2px solid var(--line);
+    flex-shrink:0;overflow:hidden;}
+  .vb-team-row.home .vb-crest{background:var(--home-color);} .vb-team-row.away .vb-crest{background:var(--away-color);}
+  .vb-team-names{min-width:0;}
+  .vb-team-name{font-family:var(--display);font-weight:800;font-size:30px;color:var(--white);
+    text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    display:flex;align-items:center;gap:8px;}
+  .vb-team-full{font-family:var(--body);font-weight:600;font-size:13px;color:rgba(255,255,255,0.5);
+    text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
+  .vb-team-full:empty{display:none;}
+  .vb-overall-num{font-family:var(--display);font-weight:800;font-size:44px;color:var(--white);}
+  .vb-team-row.winner .vb-overall-num{color:var(--gold);}
+  .vb-set-num{font-family:var(--display);font-weight:700;font-size:30px;color:rgba(255,255,255,0.4);}
+  .vb-set-num.win{color:var(--white);}
+  .vb-set-num.live{color:var(--gold);}
+
   #scene-break .card{width:1000px;padding:52px 60px 44px;}
   .label-sm{font-family:var(--display);font-weight:700;font-size:18px;letter-spacing:6px;
     color:var(--gold);text-transform:uppercase;margin-bottom:10px;}
@@ -211,6 +263,7 @@
           <div class="mbase third" id="mbThird"></div>
         </div>
         <div class="extra-sm" id="extra"></div>
+        <div class="vb-box-row" id="vbBoxRow"></div>
       </div>
       <div class="team away">
         <div class="score-stack">
@@ -230,7 +283,8 @@
 
   <div class="scene" id="scene-matchup">
     <div class="card">
-      <div class="eyebrow" id="league">SRV CONFERENCE</div>
+      <div class="eyebrow" id="league">ARIZONA COMMUNITY COLLEGE ATHLETIC CONFERENCE (ACCAC)</div>
+      <div class="division-line" id="division">NJCAA Division I</div>
       <div class="event-line" id="event">Regular Season</div>
       <div class="row">
         <div class="side home">
@@ -275,6 +329,55 @@
     </div>
   </div>
 
+  <div class="scene" id="scene-vb-recap">
+    <div class="card">
+      <div class="vb-recap-tag" id="vbRecapTag">SET BREAK</div>
+      <div class="vb-recap-event" id="vbRecapEvent">Match Title</div>
+      <div class="vb-recap-sub" id="vbRecapSub">Conference</div>
+      <div class="vb-table">
+        <div class="vb-header-row">
+          <div class="vb-col-team"></div>
+          <div><span class="vb-header-label">Sets</span></div>
+          <div><span class="vb-header-label">Set 1</span></div>
+          <div><span class="vb-header-label">Set 2</span></div>
+          <div><span class="vb-header-label">Set 3</span></div>
+          <div><span class="vb-header-label">Set 4</span></div>
+          <div><span class="vb-header-label">Set 5</span></div>
+        </div>
+        <div class="vb-team-row home" id="vbHomeRow">
+          <div class="vb-col-team">
+            <div class="vb-crest" id="vbHomeCrest">H</div>
+            <div class="vb-team-names">
+              <div class="vb-team-name"><span class="serve-dot" id="vbHomeServe"></span><span id="vbHomeName">HOME</span></div>
+              <div class="vb-team-full" id="vbHomeFullName"></div>
+            </div>
+          </div>
+          <div><span class="vb-overall-num" id="vbHomeOverall">0</span></div>
+          <div><span class="vb-set-num" id="vbHomeSet1">–</span></div>
+          <div><span class="vb-set-num" id="vbHomeSet2">–</span></div>
+          <div><span class="vb-set-num" id="vbHomeSet3">–</span></div>
+          <div><span class="vb-set-num" id="vbHomeSet4">–</span></div>
+          <div><span class="vb-set-num" id="vbHomeSet5">–</span></div>
+        </div>
+        <div class="vb-team-row away" id="vbAwayRow">
+          <div class="vb-col-team">
+            <div class="vb-crest" id="vbAwayCrest">A</div>
+            <div class="vb-team-names">
+              <div class="vb-team-name"><span id="vbAwayName">AWAY</span><span class="serve-dot" id="vbAwayServe"></span></div>
+              <div class="vb-team-full" id="vbAwayFullName"></div>
+            </div>
+          </div>
+          <div><span class="vb-overall-num" id="vbAwayOverall">0</span></div>
+          <div><span class="vb-set-num" id="vbAwaySet1">–</span></div>
+          <div><span class="vb-set-num" id="vbAwaySet2">–</span></div>
+          <div><span class="vb-set-num" id="vbAwaySet3">–</span></div>
+          <div><span class="vb-set-num" id="vbAwaySet4">–</span></div>
+          <div><span class="vb-set-num" id="vbAwaySet5">–</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="scene" id="scene-break">
     <div class="card">
       <div class="label-sm" id="tag">BREAK</div>
@@ -292,18 +395,30 @@
   </div>
 
 <script>
-  const SCENES = ['scorebug','matchup','halftime','break'];
+  const SCENES = ['scorebug','matchup','halftime','break','vb-recap'];
   const KICKOFF_LABELS = { soccer:'Kickoff', basketball:'Tip-off', volleyball:'First Serve', baseball:'First Pitch', softball:'First Pitch' };
   const HALFTIME_TITLES = { soccer:'Halftime', basketball:'Halftime', volleyball:'Set Break', baseball:'Inning Break', softball:'Inning Break' };
+  const SETS_TO_WIN = 3; // best-of-5 — first side to 3 sets takes the match
 
   function applyTeamColors(s){
     document.documentElement.style.setProperty('--home-color', s.homeColor);
     document.documentElement.style.setProperty('--away-color', s.awayColor);
   }
 
-  function setMode(mode){
+  // The control panel's Scorebug Layout editor embeds this page in an
+  // iframe purely to position/verify the scorebug — it shouldn't require
+  // actually punching the scorebug live just to see it. ?preview=<scene>
+  // pins that one scene active regardless of the real on-air mode; the
+  // production overlay (no query string) is unaffected.
+  const FORCED_PREVIEW_SCENE = new URLSearchParams(location.search).get('preview');
+
+  // Volleyball has no separate scene button of its own — the operator's
+  // existing "Set Break" live-scene tap just resolves to this bigger box-
+  // score recap instead of the plain halftime card while sport=volleyball.
+  function setMode(mode, sport){
+    const activeName = FORCED_PREVIEW_SCENE || ((mode === 'halftime' && sport === 'volleyball') ? 'vb-recap' : mode);
     SCENES.forEach(name => {
-      document.getElementById('scene-' + name).classList.toggle('active', name === mode);
+      document.getElementById('scene-' + name).classList.toggle('active', name === activeName);
     });
   }
 
@@ -343,9 +458,66 @@
     }
   }
 
+  function renderVbBoxScore(s){
+    const row = document.getElementById('vbBoxRow');
+    row.classList.add('show');
+    row.innerHTML = '';
+    const scores = s.volleyballSetScores || {};
+    for(let n = 1; n <= s.volleyballSet; n++){
+      const isCurrent = n === s.volleyballSet;
+      const entry = isCurrent ? { home: s.homeScore, away: s.awayScore } : scores[n];
+      const homeWin = entry && !isCurrent && entry.home > entry.away;
+      const awayWin = entry && !isCurrent && entry.away > entry.home;
+      const cell = document.createElement('div');
+      cell.className = 'vb-box-cell' + (isCurrent ? ' current' : '');
+      cell.innerHTML =
+        '<div class="vb-box-num home' + (homeWin ? ' win' : '') + '">' + (entry ? entry.home : '–') + '</div>' +
+        '<div class="vb-box-num away' + (awayWin ? ' win' : '') + '">' + (entry ? entry.away : '–') + '</div>';
+      row.appendChild(cell);
+    }
+  }
+
+  function renderVbRecap(s){
+    const scores = s.volleyballSetScores || {};
+    const matchOver = s.setsWon.home >= SETS_TO_WIN || s.setsWon.away >= SETS_TO_WIN;
+
+    document.getElementById('vbRecapTag').textContent = matchOver ? 'FINAL' : 'SET BREAK';
+    document.getElementById('vbRecapEvent').textContent = s.event;
+    document.getElementById('vbRecapSub').textContent = s.league;
+
+    setCrest(document.getElementById('vbHomeCrest'), s.homeLogo, s.home.slice(0,1), s.homeColor, s.homeLogoBg);
+    setCrest(document.getElementById('vbAwayCrest'), s.awayLogo, s.away.slice(0,1), s.awayColor, s.awayLogoBg);
+    document.getElementById('vbHomeName').textContent = s.home;
+    document.getElementById('vbAwayName').textContent = s.away;
+    document.getElementById('vbHomeFullName').textContent = s.homeFullName || '';
+    document.getElementById('vbAwayFullName').textContent = s.awayFullName || '';
+    document.getElementById('vbHomeOverall').textContent = s.setsWon.home;
+    document.getElementById('vbAwayOverall').textContent = s.setsWon.away;
+
+    document.getElementById('vbHomeRow').classList.toggle('winner', matchOver && s.setsWon.home > s.setsWon.away);
+    document.getElementById('vbAwayRow').classList.toggle('winner', matchOver && s.setsWon.away > s.setsWon.home);
+    document.getElementById('vbHomeServe').classList.toggle('show', !matchOver && s.servingSide === 'home');
+    document.getElementById('vbAwayServe').classList.toggle('show', !matchOver && s.servingSide === 'away');
+
+    for(let n = 1; n <= 5; n++){
+      const isCurrent = !matchOver && n === s.volleyballSet;
+      const entry = isCurrent ? { home: s.homeScore, away: s.awayScore } : scores[n];
+      const homeCell = document.getElementById('vbHomeSet' + n);
+      const awayCell = document.getElementById('vbAwaySet' + n);
+      homeCell.textContent = entry ? entry.home : '–';
+      awayCell.textContent = entry ? entry.away : '–';
+      const homeWin = entry && !isCurrent && entry.home > entry.away;
+      const awayWin = entry && !isCurrent && entry.away > entry.home;
+      homeCell.classList.toggle('win', !!homeWin);
+      awayCell.classList.toggle('win', !!awayWin);
+      homeCell.classList.toggle('live', isCurrent);
+      awayCell.classList.toggle('live', isCurrent);
+    }
+  }
+
   function render(s){
     applyTeamColors(s);
-    setMode(s.mode);
+    setMode(s.mode, s.sport);
 
     document.getElementById('homeName').textContent = s.home;
     document.getElementById('awayName').textContent = s.away;
@@ -382,6 +554,7 @@
     extra.classList.remove('show');
     document.getElementById('homeServe').classList.remove('show');
     document.getElementById('awayServe').classList.remove('show');
+    document.getElementById('vbBoxRow').classList.remove('show');
     document.getElementById('miniDiamond').classList.remove('show');
 
     if(s.sport === 'basketball'){
@@ -401,6 +574,7 @@
       extra.classList.add('show');
       document.getElementById('homeServe').classList.toggle('show', s.servingSide === 'home');
       document.getElementById('awayServe').classList.toggle('show', s.servingSide === 'away');
+      renderVbBoxScore(s);
     } else if(s.sport === 'baseball' || s.sport === 'softball'){
       document.getElementById('miniDiamond').classList.add('show');
       document.getElementById('mbFirst').classList.toggle('on', s.bases.first);
@@ -411,6 +585,7 @@
     }
 
     document.getElementById('league').textContent = s.league.toUpperCase();
+    document.getElementById('division').textContent = s.division || '';
     document.getElementById('event').textContent = s.event;
     document.getElementById('mHomeName').textContent = s.home;
     document.getElementById('mAwayName').textContent = s.away;
@@ -451,6 +626,7 @@
 
     renderClock(s);
     renderTimer(s);
+    renderVbRecap(s);
     applyScorebugLayout(s.scorebugLayout || { x: 0, y: 0, scale: 1 });
   }
 

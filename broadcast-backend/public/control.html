@@ -51,8 +51,9 @@
   }
 
   header{position:sticky;top:0;background:var(--bg);z-index:10;
-    padding:16px 4px 12px;display:flex;align-items:center;justify-content:space-between;
+    padding:16px 4px 12px;display:flex;flex-direction:column;gap:14px;
     border-bottom:1px solid var(--line);margin-bottom:16px;}
+  .header-top{display:flex;align-items:center;justify-content:space-between;gap:16px;}
   h1{font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:0.5px;margin:0;}
   #conn{font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;
     padding:5px 10px;border-radius:20px;background:var(--panel-2);color:var(--dim);}
@@ -63,8 +64,17 @@
   .section-label{font-family:var(--display);font-weight:700;font-size:14px;letter-spacing:2px;
     color:var(--dim);text-transform:uppercase;margin:0 0 10px 2px;}
 
-  .sport-tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:20px;}
-  .sport-tab{height:52px;border:1px solid var(--line);background:var(--panel);
+  /* Lives inside <header> now (see markup) so the sport picker sits in the
+     same full-width bar as the title/connection indicator instead of
+     eating space at the top of column 1. Stacked under the title row on
+     narrow screens; folds into one row alongside it once there's room. */
+  .sport-tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;}
+  @media (min-width:720px){
+    header{flex-direction:row;align-items:center;gap:24px;}
+    .header-top{flex-shrink:0;}
+    .sport-tabs{flex:1;gap:14px;}
+  }
+  .sport-tab{height:40px;border:1px solid var(--line);background:var(--panel);
     color:var(--dim);font-family:var(--display);font-weight:700;font-size:12px;letter-spacing:0.5px;
     text-transform:uppercase;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;}
   .sport-tab .icon{font-size:18px;line-height:1;}
@@ -194,6 +204,19 @@
     font-size:20px;display:flex;align-items:center;justify-content:center;}
   .stat-val{font-family:var(--display);font-weight:800;font-size:24px;min-width:26px;text-align:center;}
 
+  /* ---- Volleyball box-score editor ----
+     Mirrors the recorded per-set score so the operator can backfill or fix
+     an entry by hand — Next Set is the normal path, this is the escape
+     hatch. Blank/placeholder cell = no set recorded yet at that slot. */
+  .vb-box-editor-row{display:grid;grid-template-columns:56px repeat(5,1fr);gap:6px;margin-bottom:6px;align-items:center;}
+  .vb-box-editor-row.header > div{text-align:center;font-family:var(--display);font-weight:700;
+    font-size:12px;color:var(--dim);text-transform:uppercase;}
+  .vb-box-editor-side{font-family:var(--display);font-weight:700;font-size:12px;color:var(--dim);
+    text-transform:uppercase;}
+  .vb-box-input{width:100%;height:36px;text-align:center;background:var(--panel-2);border:1px solid var(--line);
+    border-radius:6px;color:var(--white);font-family:var(--display);font-weight:700;font-size:15px;padding:0;}
+  .vb-next-set-btn{background:var(--green);color:#08210f;}
+
   .serve-row{display:flex;gap:8px;margin-bottom:10px;}
   .serve-btn{flex:1;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--panel);
     color:var(--dim);font-family:var(--body);font-weight:600;font-size:13px;letter-spacing:0.5px;text-transform:uppercase;}
@@ -254,19 +277,20 @@
 <body>
 
 <header>
-  <h1>Broadcast Control</h1>
-  <span id="conn">connecting…</span>
+  <div class="header-top">
+    <h1>Broadcast Control</h1>
+    <span id="conn">connecting…</span>
+  </div>
+  <div class="sport-tabs" id="sportTabs">
+    <button class="sport-tab" data-sport="soccer"><span class="icon">⚽</span>Soccer</button>
+    <button class="sport-tab" data-sport="basketball"><span class="icon">🏀</span>Basketball</button>
+    <button class="sport-tab" data-sport="volleyball"><span class="icon">🏐</span>Volleyball</button>
+    <button class="sport-tab" data-sport="baseball"><span class="icon">⚾</span>Baseball</button>
+    <button class="sport-tab" data-sport="softball"><span class="icon">🥎</span>Softball</button>
+  </div>
 </header>
 
 <div class="layout-grid" id="layoutGrid">
-
-<div class="sport-tabs pri-setup" id="sportTabs">
-  <button class="sport-tab" data-sport="soccer"><span class="icon">⚽</span>Soccer</button>
-  <button class="sport-tab" data-sport="basketball"><span class="icon">🏀</span>Basketball</button>
-  <button class="sport-tab" data-sport="volleyball"><span class="icon">🏐</span>Volleyball</button>
-  <button class="sport-tab" data-sport="baseball"><span class="icon">⚾</span>Baseball</button>
-  <button class="sport-tab" data-sport="softball"><span class="icon">🥎</span>Softball</button>
-</div>
 
 <section class="pri-scene">
   <div class="section-label">Live Scene</div>
@@ -405,7 +429,8 @@
     <button class="preset-btn" data-set="4">4</button>
     <button class="preset-btn" data-set="5">5</button>
   </div>
-  <div class="section-label">Sets Won</div>
+  <button class="apply-btn vb-next-set-btn" id="vbNextSetBtn">Next Set →</button>
+  <div class="section-label" style="margin-top:16px;">Sets Won</div>
   <div class="pair-grid">
     <div class="stat-card">
       <span class="stat-label" id="setsWonHomeLabel">Home</span>
@@ -428,6 +453,26 @@
   <div class="serve-row">
     <button class="serve-btn" id="serveHomeBtn" data-serve="home">Home Serving</button>
     <button class="serve-btn" id="serveAwayBtn" data-serve="away">Away Serving</button>
+  </div>
+  <div class="section-label">Box Score</div>
+  <div class="vb-box-editor-row header">
+    <div></div><div>1</div><div>2</div><div>3</div><div>4</div><div>5</div>
+  </div>
+  <div class="vb-box-editor-row">
+    <div class="vb-box-editor-side" id="vbBoxHomeLabel">HOME</div>
+    <input type="number" min="0" class="vb-box-input" data-side="home" data-set="1" placeholder="–">
+    <input type="number" min="0" class="vb-box-input" data-side="home" data-set="2" placeholder="–">
+    <input type="number" min="0" class="vb-box-input" data-side="home" data-set="3" placeholder="–">
+    <input type="number" min="0" class="vb-box-input" data-side="home" data-set="4" placeholder="–">
+    <input type="number" min="0" class="vb-box-input" data-side="home" data-set="5" placeholder="–">
+  </div>
+  <div class="vb-box-editor-row">
+    <div class="vb-box-editor-side" id="vbBoxAwayLabel">AWAY</div>
+    <input type="number" min="0" class="vb-box-input" data-side="away" data-set="1" placeholder="–">
+    <input type="number" min="0" class="vb-box-input" data-side="away" data-set="2" placeholder="–">
+    <input type="number" min="0" class="vb-box-input" data-side="away" data-set="3" placeholder="–">
+    <input type="number" min="0" class="vb-box-input" data-side="away" data-set="4" placeholder="–">
+    <input type="number" min="0" class="vb-box-input" data-side="away" data-set="5" placeholder="–">
   </div>
 </section>
 
@@ -456,6 +501,7 @@
     </div>
   </div>
   <button class="reset-btn" id="resetCountBtn" style="margin-top:10px;">Reset Count</button>
+  <div class="clock-visibility-hint">3rd strike or 3rd out auto-resets the count, and 3 outs also flips Top/Bottom and advances the inning — no need to do it by hand.</div>
 
   <div class="section-label" style="margin-top:18px;">Runners (tap a base)</div>
   <div class="diamond-wrap">
@@ -551,6 +597,7 @@
       <div class="field"><label>Away Record</label><input type="text" id="awayRecord" placeholder="6-4"></div>
     </div>
     <div class="field"><label>League / Conference</label><input type="text" id="league"></div>
+    <div class="field"><label>Division</label><input type="text" id="division"></div>
     <div class="field"><label>Event Title</label><input type="text" id="event"></div>
     <div class="field" id="kickoffField"><label>Kickoff Time</label><input type="text" id="kickoff" placeholder="7:00 PM"></div>
     <button class="apply-btn" id="saveTeams">Save Team Info</button>
@@ -581,7 +628,7 @@
   <summary>Scorebug Layout</summary>
   <div class="details-body">
     <div class="layout-editor-wrap" id="layoutEditorWrap">
-      <iframe id="layoutPreviewFrame" class="layout-preview-frame" src="/overlay.html"></iframe>
+      <iframe id="layoutPreviewFrame" class="layout-preview-frame" src="/overlay.html?preview=scorebug"></iframe>
       <div class="layout-guide-v" id="layoutGuideV"></div>
       <div class="layout-guide-h" id="layoutGuideH"></div>
       <div class="layout-proxy" id="layoutProxy">
@@ -653,8 +700,10 @@
       if(isNaN(m) || isNaN(s)) return null;
       return m*60 + s;
     }
+    // No colon — treat a bare number as whole minutes (e.g. "10" -> 10:00)
+    // rather than raw seconds, so the operator never has to type ":00".
     const n = parseInt(t, 10);
-    return isNaN(n) ? null : n;
+    return isNaN(n) ? null : n*60;
   }
 
   function currentClockSeconds(s){
@@ -694,6 +743,17 @@
     document.getElementById('customTimerInput').value = fmtClock(remaining);
   }
   setInterval(() => { if(latestState){ renderClock(latestState); renderCustomTimerInput(latestState); } }, 250);
+
+  function renderVbBoxEditor(s){
+    document.getElementById('vbBoxHomeLabel').textContent = s.home.toUpperCase();
+    document.getElementById('vbBoxAwayLabel').textContent = s.away.toUpperCase();
+    const scores = s.volleyballSetScores || {};
+    document.querySelectorAll('.vb-box-input').forEach(input => {
+      if(document.activeElement === input) return;
+      const entry = scores[input.dataset.set];
+      input.value = entry && entry[input.dataset.side] != null ? entry[input.dataset.side] : '';
+    });
+  }
 
   function render(s){
     document.querySelectorAll('.sport-tab').forEach(b => b.classList.toggle('active', b.dataset.sport === s.sport));
@@ -740,6 +800,7 @@
     document.getElementById('setsWonAwayLabel').textContent = s.away.toUpperCase();
     document.getElementById('serveHomeBtn').classList.toggle('active', s.servingSide === 'home');
     document.getElementById('serveAwayBtn').classList.toggle('active', s.servingSide === 'away');
+    renderVbBoxEditor(s);
 
     document.getElementById('inningNum').textContent = s.inning;
     document.getElementById('inningHalfBtn').textContent = s.inningHalf;
@@ -769,6 +830,7 @@
     if(document.activeElement.id !== 'homeRecord') document.getElementById('homeRecord').value = s.homeRecord;
     if(document.activeElement.id !== 'awayRecord') document.getElementById('awayRecord').value = s.awayRecord;
     if(document.activeElement.id !== 'league') document.getElementById('league').value = s.league;
+    if(document.activeElement.id !== 'division') document.getElementById('division').value = s.division || '';
     if(document.activeElement.id !== 'event') document.getElementById('event').value = s.event;
     if(document.activeElement.id !== 'kickoff') document.getElementById('kickoff').value = s.kickoff;
 
@@ -870,6 +932,15 @@
   });
   document.getElementById('serveHomeBtn').addEventListener('click', () => send({ type: 'SET_SERVE', side: 'home' }));
   document.getElementById('serveAwayBtn').addEventListener('click', () => send({ type: 'SET_SERVE', side: 'away' }));
+
+  document.getElementById('vbNextSetBtn').addEventListener('click', () => send({ type: 'VOLLEYBALL_NEXT_SET' }));
+  document.querySelectorAll('.vb-box-input').forEach(input => {
+    input.addEventListener('change', () => {
+      const value = parseInt(input.value, 10);
+      if(isNaN(value)) return;
+      send({ type: 'SET_VOLLEYBALL_SET_SCORE', set: parseInt(input.dataset.set, 10), side: input.dataset.side, value });
+    });
+  });
 
   document.getElementById('inningPlus').addEventListener('click', () => {
     if(!latestState) return;
@@ -1030,7 +1101,7 @@
   const markTeamsSaved = makeSaveFeedback(document.getElementById('saveTeams'), [
     'homeName', 'awayName', 'homeFullName', 'awayFullName', 'homeColor', 'awayColor',
     'homeLogoBg', 'awayLogoBg', 'homeRecord', 'awayRecord',
-    'league', 'event', 'kickoff', 'awayTeamSelect'
+    'league', 'division', 'event', 'kickoff', 'awayTeamSelect'
   ]);
   const markBreakSaved = makeSaveFeedback(document.getElementById('saveBreak'), [
     'breakMode', 'breakTitle', 'sponsor', 'sponsorTag', 'footer', 'qr'
@@ -1052,6 +1123,7 @@
         homeRecord: document.getElementById('homeRecord').value,
         awayRecord: document.getElementById('awayRecord').value,
         league: document.getElementById('league').value,
+        division: document.getElementById('division').value,
         event: document.getElementById('event').value,
         kickoff: document.getElementById('kickoff').value
       }
@@ -1230,7 +1302,7 @@
   // (set/sets-won/serving, or inning/count/runners) takes that slot instead
   // — otherwise column 1 would sit mostly empty for those sports while
   // column 2 carried everything.
-  const dashColASelectors = ['.pri-setup', '.pri-score', '.pri-clock', '.pri-col1-sport', '.pri-reset'];
+  const dashColASelectors = ['.pri-score', '.pri-clock', '.pri-col1-sport', '.pri-reset'];
   const dashColBSelectors = ['.pri-primary-stats', '.pri-secondary-stats', '.pri-scene', '.pri-break',
     '.pri-team-setup', '.pri-break-setup', '.pri-layout-setup'];
 

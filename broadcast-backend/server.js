@@ -37,7 +37,8 @@ let state = {
   awayLogoBg: '#FFFFFF',
   homeScore: 0,
   awayScore: 0,
-  league: 'SRV Conference',
+  league: 'Arizona Community College Athletic Conference (ACCAC)',
+  division: 'NJCAA Division I',
   event: 'Regular Season',
   homeRecord: '0-0',
   awayRecord: '0-0',
@@ -68,6 +69,12 @@ let state = {
   volleyballSet: 1,
   setsWon: { home: 0, away: 0 },
   servingSide: 'home',
+  // Box score — final score for each *completed* set, keyed by set number
+  // ("1".."5"). Populated by VOLLEYBALL_NEXT_SET when the operator locks in
+  // a set (or hand-edited via SET_VOLLEYBALL_SET_SCORE for corrections).
+  // The in-progress set isn't stored here — its live score is just
+  // homeScore/awayScore, same as always.
+  volleyballSetScores: {},
 
   // Baseball / Softball (shared fields — same sport mechanically)
   inning: 1,
@@ -204,6 +211,7 @@ function applyAction(action) {
         state.volleyballSet = 1;
         state.setsWon = { home: 0, away: 0 };
         state.servingSide = 'home';
+        state.volleyballSetScores = {};
       } else if (sport === 'baseball' || sport === 'softball') {
         state.inning = 1;
         state.inningHalf = 'Top';
@@ -294,6 +302,30 @@ function applyAction(action) {
     case 'SET_SERVE':
       state.servingSide = action.side;
       break;
+
+    // Locks the current live score in as the just-finished set's box-score
+    // entry, tallies the set win, and starts the next set at 0-0 — the
+    // single-tap version of what used to be three separate operator actions
+    // (reset score, bump sets won, change set number).
+    case 'VOLLEYBALL_NEXT_SET': {
+      const setNum = state.volleyballSet;
+      state.volleyballSetScores[setNum] = { home: state.homeScore, away: state.awayScore };
+      if (state.homeScore > state.awayScore) state.setsWon.home += 1;
+      else if (state.awayScore > state.homeScore) state.setsWon.away += 1;
+      state.homeScore = 0;
+      state.awayScore = 0;
+      state.volleyballSet = Math.min(5, state.volleyballSet + 1);
+      break;
+    }
+
+    // Manual correction for a single box-score cell (e.g. Next Set was
+    // tapped a beat late, or a set needs backfilling by hand).
+    case 'SET_VOLLEYBALL_SET_SCORE': {
+      const entry = state.volleyballSetScores[action.set] || { home: 0, away: 0 };
+      entry[action.side] = Math.max(0, Math.round(action.value));
+      state.volleyballSetScores[action.set] = entry;
+      break;
+    }
 
     // ---------------- Baseball / Softball ----------------
     case 'BB_BALL':
