@@ -1,6 +1,9 @@
 node_modules/
 .env
 
+# Persisted game-day state (created at runtime, not checked in)
+/broadcast-backend/data/
+
 # superseded soccer-only draft, kept locally only
 /server.js
 /control.html

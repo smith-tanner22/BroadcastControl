@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const { WebSocketServer } = require('ws');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
@@ -14,7 +15,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // All sports' fields live side by side in one object (instead of being wiped
 // on switch) so flipping the sport tab never loses in-progress game state.
 // ---------------------------------------------------------------------------
-let state = {
+const DEFAULT_STATE = {
   sport: 'soccer', // soccer | basketball | volleyball | baseball | softball
   mode: 'off', // off | scorebug | matchup | halftime | break
   // EAC is always the home side, so its identity is baked in as the default
@@ -103,8 +104,35 @@ let state = {
   // Scorebug position/size on the overlay canvas, adjustable via the overlay
   // page's own edit mode. x/y are pixel offsets from the default centered
   // position; scale is a uniform multiplier. {0,0,1} reproduces the default.
+  scoreFlashPosition: 'top',
   scorebugLayout: { x: 0, y: 0, scale: 1 }
 };
+
+// Persistence layer — load/save state to disk so process restarts don't
+// wipe all in-game data.
+const DATA_DIR = path.join(__dirname, 'data');
+const STATE_FILE = path.join(DATA_DIR, 'state.json');
+let saveTimer = null;
+
+function loadState() {
+  const base = JSON.parse(JSON.stringify(DEFAULT_STATE));
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  } catch (e) {
+    console.error('Could not create data directory, starting with defaults:', e);
+    return base;
+  }
+  try {
+    const raw = fs.readFileSync(STATE_FILE, 'utf8');
+    const loaded = JSON.parse(raw);
+    return Object.assign(base, loaded);
+  } catch (e) {
+    console.warn('No valid saved state found, starting with defaults:', e.message);
+    return base;
+  }
+}
+
+let state = loadState();
 
 // Fallback timer length when the halftime/"Set Break" scene is cut to
 // without an explicit preset armed first (e.g. right after switching sport).
@@ -112,11 +140,22 @@ const DEFAULT_INTERMISSION_SECONDS = {
   soccer: 900, basketball: 900, volleyball: 180, baseball: 900, softball: 900
 };
 
+function scheduleSave() {
+  if (saveTimer) return;
+  saveTimer = setTimeout(() => {
+    saveTimer = null;
+    fs.writeFile(STATE_FILE, JSON.stringify(state), (err) => {
+      if (err) console.error('Failed to persist state:', err);
+    });
+  }, 750);
+}
+
 function broadcastState() {
   const msg = JSON.stringify({ type: 'STATE', state });
   wss.clients.forEach((client) => {
     if (client.readyState === 1) client.send(msg);
   });
+  scheduleSave();
 }
 
 function broadcastEvent(event) {
@@ -385,6 +424,10 @@ function applyAction(action) {
       state.scorebugLayout = { x: 0, y: 0, scale: 1 };
       break;
 
+    case 'SET_SCORE_FLASH_POSITION':
+      state.scoreFlashPosition = action.position === 'bottom' ? 'bottom' : 'top';
+      break;
+
     case 'UPDATE_TEAMS':
       Object.assign(state, action.data);
       break;
@@ -414,6 +457,30 @@ wss.on('connection', (ws) => {
     }
     applyAction(action);
   });
+});
+
+function flushStateSync() {
+  try {
+    fs.writeFileSync(STATE_FILE, JSON.stringify(state));
+  } catch (e) {
+    console.error('Failed to persist state on shutdown:', e);
+  }
+}
+
+// Graceful shutdown — flush any pending writes before exit.
+process.on('SIGINT', () => { flushStateSync(); process.exit(0); });
+process.on('SIGTERM', () => { flushStateSync(); process.exit(0); });
+
+// Crash resilience — unhandled errors don't crash the process (which would
+// trigger Render to restart and wipe in-memory state before the next boot
+// has a chance to load from disk). All applyAction cases are simple
+// synchronous field assignments, so the tradeoff (continuing after an
+// unknown error) is reasonable — state can't be left half-updated.
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught exception (process staying up):', err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled promise rejection (process staying up):', reason);
 });
 
 const PORT = process.env.PORT || 3000;

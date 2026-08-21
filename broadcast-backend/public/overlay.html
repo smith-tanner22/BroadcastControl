@@ -96,6 +96,17 @@
   .period-sm{font-family:var(--body);font-weight:600;font-size:12px;color:rgba(255,255,255,0.65);
     text-transform:uppercase;letter-spacing:2px;margin-top:2px;}
   .period-sm.hide-cam{display:none;}
+  /* When the clock is hidden for a cam-hole sport that still wants its own
+     period label visible (soccer today), pull the label out of the vertically-
+     centered stack and pin it to the bottom-right inner corner of the center
+     column, so the vertical channel behind the transparent camera window
+     stays completely clear. */
+  .period-sm.cam-side{
+    position:absolute;
+    right:8px;
+    bottom:6px;
+    margin-top:0;
+  }
   .extra-sm{font-family:var(--body);font-weight:600;font-size:12px;color:var(--gold);
     text-transform:uppercase;letter-spacing:1px;margin-top:4px;display:none;}
   .extra-sm.show{display:block;}
@@ -126,6 +137,12 @@
     20%{opacity:1;transform:translateX(-50%) translateY(-10px) scale(1);}
     75%{opacity:1;transform:translateX(-50%) translateY(-10px) scale(1);}
     100%{opacity:0;transform:translateX(-50%) translateY(-26px) scale(0.9);}}
+  .score-flash.pos-bottom{top:auto;bottom:-38px;}
+  .score-flash.pos-bottom.show{animation:drop 1.6s ease forwards;}
+  @keyframes drop{0%{opacity:0;transform:translateX(-50%) translateY(-10px) scale(0.6);}
+    20%{opacity:1;transform:translateX(-50%) translateY(10px) scale(1);}
+    75%{opacity:1;transform:translateX(-50%) translateY(10px) scale(1);}
+    100%{opacity:0;transform:translateX(-50%) translateY(26px) scale(0.9);}}
 
   /* ---------- SHARED CARD (matchup / halftime / break) ---------- */
   .card{position:absolute;top:50%;left:50%;transform:translate(-50%,-46%) scale(0.96);
@@ -166,7 +183,7 @@
     border-top:1px solid var(--line);padding-top:22px;width:100%;text-align:center;}
   .kickoff span{color:var(--gold);}
 
-  #scene-halftime .card{width:900px;padding:44px 50px 40px;}
+  #scene-halftime .card, #scene-water .card, #scene-final .card{width:900px;padding:44px 50px 40px;}
   .title-lg{font-family:var(--display);font-weight:800;font-size:52px;color:var(--white);letter-spacing:6px;text-transform:uppercase;}
   .sub{font-family:var(--body);font-weight:600;font-size:15px;color:rgba(255,255,255,0.55);
     letter-spacing:2px;text-transform:uppercase;margin-top:8px;margin-bottom:34px;}
@@ -394,8 +411,52 @@
     </div>
   </div>
 
+  <div class="scene" id="scene-water">
+    <div class="card">
+      <div class="title-lg">Water Break</div>
+      <div class="sub" id="waterEvent">Match Title</div>
+      <div class="score-row">
+        <div class="side-sm home">
+          <div class="crest-md" id="waterHomeCrest">H</div>
+          <div class="team-name-md" id="waterHomeName">HOME</div>
+          <div class="team-full-md" id="waterHomeFullName"></div>
+          <div class="score-lg" id="waterHomeScore">0</div>
+        </div>
+        <div class="dash">–</div>
+        <div class="side-sm away">
+          <div class="crest-md" id="waterAwayCrest">A</div>
+          <div class="team-name-md" id="waterAwayName">AWAY</div>
+          <div class="team-full-md" id="waterAwayFullName"></div>
+          <div class="score-lg" id="waterAwayScore">0</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="scene" id="scene-final">
+    <div class="card">
+      <div class="title-lg">Final</div>
+      <div class="sub" id="finalEvent">Match Title</div>
+      <div class="score-row">
+        <div class="side-sm home">
+          <div class="crest-md" id="finalHomeCrest">H</div>
+          <div class="team-name-md" id="finalHomeName">HOME</div>
+          <div class="team-full-md" id="finalHomeFullName"></div>
+          <div class="score-lg" id="finalHomeScore">0</div>
+        </div>
+        <div class="dash">–</div>
+        <div class="side-sm away">
+          <div class="crest-md" id="finalAwayCrest">A</div>
+          <div class="team-name-md" id="finalAwayName">AWAY</div>
+          <div class="team-full-md" id="finalAwayFullName"></div>
+          <div class="score-lg" id="finalAwayScore">0</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 <script>
-  const SCENES = ['scorebug','matchup','halftime','break','vb-recap'];
+  const SCENES = ['scorebug','matchup','halftime','break','vb-recap','water','final'];
   const KICKOFF_LABELS = { soccer:'Kickoff', basketball:'Tip-off', volleyball:'First Serve', baseball:'First Pitch', softball:'First Pitch' };
   const HALFTIME_TITLES = { soccer:'Halftime', basketball:'Halftime', volleyball:'Set Break', baseball:'Inning Break', softball:'Inning Break' };
   const SETS_TO_WIN = 3; // best-of-5 — first side to 3 sets takes the match
@@ -518,6 +579,8 @@
   function render(s){
     applyTeamColors(s);
     setMode(s.mode, s.sport);
+    document.getElementById('homeFlash').classList.toggle('pos-bottom', s.scoreFlashPosition === 'bottom');
+    document.getElementById('awayFlash').classList.toggle('pos-bottom', s.scoreFlashPosition === 'bottom');
 
     document.getElementById('homeName').textContent = s.home;
     document.getElementById('awayName').textContent = s.away;
@@ -545,6 +608,7 @@
     document.getElementById('scoreboardBox').classList.toggle('bb', isBasketball);
     document.getElementById('centerSm').classList.toggle('cam-hole', camHole);
     document.getElementById('period').classList.toggle('hide-cam', camHole && isBasketball);
+    document.getElementById('period').classList.toggle('cam-side', camHole && !isBasketball);
 
     // Sport-specific sub-stats on the scorebug
     const homeSub = document.getElementById('homeSubStat');
@@ -608,6 +672,26 @@
     setCrest(document.getElementById('htAwayCrest'), s.awayLogo, s.away.slice(0,1), s.awayColor, s.awayLogoBg);
     document.getElementById('htHomeScore').textContent = s.homeScore;
     document.getElementById('htAwayScore').textContent = s.awayScore;
+
+    document.getElementById('waterEvent').textContent = s.event;
+    document.getElementById('waterHomeName').textContent = s.home;
+    document.getElementById('waterAwayName').textContent = s.away;
+    document.getElementById('waterHomeFullName').textContent = s.homeFullName || '';
+    document.getElementById('waterAwayFullName').textContent = s.awayFullName || '';
+    setCrest(document.getElementById('waterHomeCrest'), s.homeLogo, s.home.slice(0,1), s.homeColor, s.homeLogoBg);
+    setCrest(document.getElementById('waterAwayCrest'), s.awayLogo, s.away.slice(0,1), s.awayColor, s.awayLogoBg);
+    document.getElementById('waterHomeScore').textContent = s.homeScore;
+    document.getElementById('waterAwayScore').textContent = s.awayScore;
+
+    document.getElementById('finalEvent').textContent = s.event;
+    document.getElementById('finalHomeName').textContent = s.home;
+    document.getElementById('finalAwayName').textContent = s.away;
+    document.getElementById('finalHomeFullName').textContent = s.homeFullName || '';
+    document.getElementById('finalAwayFullName').textContent = s.awayFullName || '';
+    setCrest(document.getElementById('finalHomeCrest'), s.homeLogo, s.home.slice(0,1), s.homeColor, s.homeLogoBg);
+    setCrest(document.getElementById('finalAwayCrest'), s.awayLogo, s.away.slice(0,1), s.awayColor, s.awayLogoBg);
+    document.getElementById('finalHomeScore').textContent = s.homeScore;
+    document.getElementById('finalAwayScore').textContent = s.awayScore;
 
     const labels = { timeout: 'TIMEOUT', brb: 'BREAK', sponsor: 'SPONSOR' };
     document.getElementById('tag').textContent = labels[s.breakMode] || 'BREAK';

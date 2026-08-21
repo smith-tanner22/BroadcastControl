@@ -299,6 +299,8 @@
     <button class="mode-btn" data-mode="matchup">Matchup</button>
     <button class="mode-btn" data-mode="halftime" id="halftimeModeBtn">Halftime</button>
     <button class="mode-btn" data-mode="break">Break</button>
+    <button class="mode-btn" data-mode="final">Final</button>
+    <button class="mode-btn" data-mode="water" data-sport-section="soccer" data-show-display="flex">Water Break</button>
     <button class="mode-btn off" data-mode="off">Off</button>
   </div>
 </section>
@@ -624,6 +626,14 @@
   </div>
 </details>
 
+<section class="pri-flash-position">
+  <div class="section-label">Score Flash Position</div>
+  <div class="clock-visibility-row">
+    <button class="clock-btn vis" id="flashTopBtn" data-position="top">Flash: Top</button>
+    <button class="clock-btn vis" id="flashBottomBtn" data-position="bottom">Flash: Bottom</button>
+  </div>
+</section>
+
 <details id="layoutDetails" class="pri-layout-setup">
   <summary>Scorebug Layout</summary>
   <div class="details-body">
@@ -720,6 +730,8 @@
     el.classList.toggle('running', s.clockRunning);
     document.getElementById('clockShowBtn').classList.toggle('active', s.clockVisible !== false);
     document.getElementById('clockHideBtn').classList.toggle('active', s.clockVisible === false);
+    document.getElementById('flashTopBtn').classList.toggle('active', s.scoreFlashPosition !== 'bottom');
+    document.getElementById('flashBottomBtn').classList.toggle('active', s.scoreFlashPosition === 'bottom');
     // Mirror the live value into the editable field too, so the operator can
     // see the running time and nudge it without hunting for the big display —
     // but don't fight them while they're actively typing a correction.
@@ -920,6 +932,8 @@
   document.getElementById('clockPauseBtn').addEventListener('click', () => send({ type: 'PAUSE_CLOCK' }));
   document.getElementById('clockShowBtn').addEventListener('click', () => send({ type: 'SET_CLOCK_VISIBLE', visible: true }));
   document.getElementById('clockHideBtn').addEventListener('click', () => send({ type: 'SET_CLOCK_VISIBLE', visible: false }));
+  document.getElementById('flashTopBtn').addEventListener('click', () => send({ type: 'SET_SCORE_FLASH_POSITION', position: 'top' }));
+  document.getElementById('flashBottomBtn').addEventListener('click', () => send({ type: 'SET_SCORE_FLASH_POSITION', position: 'bottom' }));
 
   document.querySelectorAll('[data-action="foul"]').forEach(btn => {
     btn.addEventListener('click', () => send({ type: 'FOUL_DELTA', side: btn.dataset.side, delta: parseInt(btn.dataset.delta, 10) }));
@@ -1304,7 +1318,7 @@
   // column 2 carried everything.
   const dashColASelectors = ['.pri-score', '.pri-clock', '.pri-col1-sport', '.pri-reset'];
   const dashColBSelectors = ['.pri-primary-stats', '.pri-secondary-stats', '.pri-scene', '.pri-break',
-    '.pri-team-setup', '.pri-break-setup', '.pri-layout-setup'];
+    '.pri-flash-position', '.pri-team-setup', '.pri-break-setup', '.pri-layout-setup'];
 
   function applyDashboardMode(mql){
     if(mql.matches){
