@@ -29,8 +29,8 @@
      cap, no extra slant) purely so the score-flash pop-up isn't cropped by
      this clip-path — the visible 0%-100% region and its diagonal edge are
      untouched. */
-  .team.home{clip-path:polygon(0 -80px,100% -80px,100% 0,92% 100%,0 100%);padding-right:44px;}
-  .team.away{clip-path:polygon(8% -80px,100% -80px,100% 100%,0 100%,8% 0);padding-left:44px;}
+  .team.home{clip-path:polygon(0 -80px,100% -80px,100% 0,92% 100%,92% calc(100% + 80px),0 calc(100% + 80px));padding-right:44px;}
+  .team.away{clip-path:polygon(8% -80px,100% -80px,100% calc(100% + 80px),0 calc(100% + 80px),0 100%,8% 0);padding-left:44px;}
   .team .stripe{position:absolute;top:0;bottom:0;width:8px;}
   .team.home .stripe{left:0;background:var(--home-color);}
   .team.away .stripe{right:0;background:var(--away-color);}
