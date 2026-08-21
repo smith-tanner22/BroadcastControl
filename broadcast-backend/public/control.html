@@ -650,7 +650,10 @@
       <button class="apply-btn" id="layoutSaveBtn" style="margin-top:0;">Save Position</button>
       <button class="reset-btn" id="layoutCancelBtn" style="margin-top:0;">Cancel</button>
     </div>
-    <button class="reset-btn" id="layoutResetBtn" style="margin-top:10px;">Reset to Default</button>
+    <div class="row2">
+      <button class="apply-btn" id="layoutSaveForSportBtn" style="margin-top:10px;">Save as Default for <span id="sportLabelBtn">Soccer</span></button>
+      <button class="reset-btn" id="layoutResetForSportBtn" style="margin-top:10px;">Reset <span id="sportResetLabel">Soccer</span> to Default</button>
+    </div>
   </div>
 </details>
 
@@ -767,6 +770,8 @@
     });
   }
 
+  const SPORT_DISPLAY_NAMES = { soccer:'Soccer', basketball:'Basketball', volleyball:'Volleyball', baseball:'Baseball', softball:'Softball' };
+
   function render(s){
     document.querySelectorAll('.sport-tab').forEach(b => b.classList.toggle('active', b.dataset.sport === s.sport));
     document.querySelectorAll('[data-sport-section]').forEach(el => {
@@ -777,9 +782,12 @@
       el.style.display = el.dataset.sportPreset.split(' ').includes(s.sport) ? 'flex' : 'none';
     });
 
+    const sportName = SPORT_DISPLAY_NAMES[s.sport] || s.sport;
     document.getElementById('halftimeModeBtn').textContent = HALFTIME_BTN_LABELS[s.sport];
     document.getElementById('intermissionLabel').textContent = INTERMISSION_LABELS[s.sport];
     document.querySelector('#kickoffField label').textContent = KICKOFF_LABELS[s.sport];
+    document.getElementById('sportLabelBtn').textContent = sportName;
+    document.getElementById('sportResetLabel').textContent = sportName;
 
     document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === s.mode));
     document.getElementById('homeLabel').textContent = s.home.toUpperCase();
@@ -855,7 +863,14 @@
   }
 
   document.querySelectorAll('.sport-tab').forEach(btn => {
-    btn.addEventListener('click', () => send({ type: 'SET_SPORT', sport: btn.dataset.sport }));
+    btn.addEventListener('click', () => {
+      send({ type: 'SET_SPORT', sport: btn.dataset.sport });
+      // Reinitialize the layout editor if it's open, so it loads the new sport's layout
+      const layoutDetails = document.getElementById('layoutDetails');
+      if(layoutDetails && layoutDetails.open) {
+        setTimeout(initLayoutEditor, 100);
+      }
+    });
   });
 
   document.querySelectorAll('.mode-btn').forEach(btn => {
@@ -1296,9 +1311,16 @@
     send({ type: 'SET_SCOREBUG_LAYOUT', x: layoutDraft.x, y: layoutDraft.y, scale: layoutDraft.scale });
   });
   document.getElementById('layoutCancelBtn').addEventListener('click', initLayoutEditor);
-  document.getElementById('layoutResetBtn').addEventListener('click', () => {
-    send({ type: 'RESET_SCOREBUG_LAYOUT' });
-    setTimeout(initLayoutEditor, 200);
+  document.getElementById('layoutSaveForSportBtn').addEventListener('click', () => {
+    if(latestState){
+      send({ type: 'SAVE_SCOREBUG_LAYOUT_FOR_SPORT', sport: latestState.sport, x: layoutDraft.x, y: layoutDraft.y, scale: layoutDraft.scale });
+    }
+  });
+  document.getElementById('layoutResetForSportBtn').addEventListener('click', () => {
+    if(latestState){
+      send({ type: 'RESET_SCOREBUG_LAYOUT_FOR_SPORT', sport: latestState.sport });
+      setTimeout(initLayoutEditor, 200);
+    }
   });
 
   // ---------------- Tablet/desktop dashboard columns ----------------

@@ -17,7 +17,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ---------------------------------------------------------------------------
 const DEFAULT_STATE = {
   sport: 'soccer', // soccer | basketball | volleyball | baseball | softball
-  mode: 'off', // off | scorebug | matchup | halftime | break
+  mode: 'scorebug', // off | scorebug | matchup | halftime | break
   // EAC is always the home side, so its identity is baked in as the default
   // here instead of being typed into the control panel every gameday.
   home: 'EAC',
@@ -105,7 +105,16 @@ const DEFAULT_STATE = {
   // page's own edit mode. x/y are pixel offsets from the default centered
   // position; scale is a uniform multiplier. {0,0,1} reproduces the default.
   scoreFlashPosition: 'top',
-  scorebugLayout: { x: 0, y: 0, scale: 1 }
+  scorebugLayout: { x: 0, y: 0, scale: 1 },
+  // Sport-specific default positions for the scorebug — saved separately per
+  // sport so switching doesn't lose the customized position for that sport.
+  scorebugLayouts: {
+    soccer: { x: 0, y: 0, scale: 1 },
+    basketball: { x: 0, y: 0, scale: 1 },
+    volleyball: { x: 0, y: 0, scale: 1 },
+    baseball: { x: 0, y: 0, scale: 1 },
+    softball: { x: 0, y: 0, scale: 1 }
+  }
 };
 
 // Persistence layer — load/save state to disk so process restarts don't
@@ -198,6 +207,10 @@ function applyAction(action) {
   switch (action.type) {
     case 'SET_SPORT':
       state.sport = action.sport;
+      // Load the sport-specific scorebug layout, or default if not set
+      if (state.scorebugLayouts && state.scorebugLayouts[action.sport]) {
+        state.scorebugLayout = Object.assign({}, state.scorebugLayouts[action.sport]);
+      }
       break;
 
     case 'SET_MODE':
@@ -420,9 +433,25 @@ function applyAction(action) {
       state.scorebugLayout = { x: action.x, y: action.y, scale: action.scale };
       break;
 
+    case 'SAVE_SCOREBUG_LAYOUT_FOR_SPORT': {
+      const sport = action.sport || state.sport;
+      if (!state.scorebugLayouts) state.scorebugLayouts = {};
+      state.scorebugLayouts[sport] = { x: action.x, y: action.y, scale: action.scale };
+      state.scorebugLayout = { x: action.x, y: action.y, scale: action.scale };
+      break;
+    }
+
     case 'RESET_SCOREBUG_LAYOUT':
       state.scorebugLayout = { x: 0, y: 0, scale: 1 };
       break;
+
+    case 'RESET_SCOREBUG_LAYOUT_FOR_SPORT': {
+      const sport = action.sport || state.sport;
+      if (!state.scorebugLayouts) state.scorebugLayouts = {};
+      state.scorebugLayouts[sport] = { x: 0, y: 0, scale: 1 };
+      state.scorebugLayout = { x: 0, y: 0, scale: 1 };
+      break;
+    }
 
     case 'SET_SCORE_FLASH_POSITION':
       state.scoreFlashPosition = action.position === 'bottom' ? 'bottom' : 'top';
