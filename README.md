@@ -1,6 +1,6 @@
 # URLs
-Overlay: https://eac-broadcast-control.onrender.com/overlay.html
-Control: https://eac-broadcast-control.onrender.com/control.html
+Overlay: https://broadcast-backend.fly.dev/overlay.html
+Control: https://broadcast-backend.fly.dev/control.html
 
 # Broadcast Control — Backend
 
