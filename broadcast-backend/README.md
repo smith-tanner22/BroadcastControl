@@ -1,8 +1,11 @@
 # Broadcast Control — Backend
 
-Shared state server for the soccer overlay + control panel. One `mode` lives on
+Shared state server for multi-sport broadcast overlays + control panel. One `mode` and `sport` live on
 the server; every connected page (the overlay feeding YoloBox, and the control
 panel on your phone/tablet) stays in sync over WebSocket.
+
+Supports soccer, basketball, volleyball, baseball, and softball with sport-specific
+statistics and overlays.
 
 ## Run it
 
@@ -31,10 +34,21 @@ this server, so you have two options:
    use that laptop's local IP (e.g. `http://192.168.1.42:3000/overlay.html`)
    for the Web URL Overlay, and open the control panel on your phone on the
    same network.
-2. **Small always-on host** (Render, Railway, a cheap VPS, etc.): deploy this
-   folder there so you get a stable public URL that works from any network —
-   useful once you're doing this for a whole season and don't want to
-   re-find a local IP every gameday.
+2. **Cloud host** (currently deployed on Fly.io): deploy to a stable public URL
+   that works from any network. Every push to `main` automatically deploys via
+   GitHub Actions — no manual deployment needed.
+
+## Deployment
+
+This app is deployed on [Fly.io](https://fly.io) and uses GitHub Actions for
+continuous deployment. Every push to the `main` branch automatically triggers
+a deploy via the `.github/workflows/deploy.yml` workflow.
+
+**Public URLs:**
+- Overlay: https://broadcast-backend.fly.dev/overlay.html
+- Control: https://broadcast-backend.fly.dev/control.html
+
+State is persisted to disk and will survive server restarts.
 
 ## Stream Deck integration (next step)
 
@@ -47,12 +61,19 @@ buttons instead of (or alongside) the touch control panel.
 
 ## What's editable live
 
-- Scene: off / scorebug / matchup / halftime / break
-- Score, clock text, half label
-- Halftime countdown (15:00 / 10:00 / 5:00 presets)
-- Team names, colors, records, league/event text, kickoff time
-- Break screen: type (timeout/BRB/sponsor), title, sponsor name + tagline,
-  footer text, QR code image URL
+- **Sport**: soccer, basketball, volleyball, baseball, softball (each sport remembers its own scorebug position)
+- **Scene**: off / scorebug / matchup / halftime / break (defaults to scorebug on startup)
+- **Score, clock text, period/half/quarter/set label**
+- **Halftime/intermission countdown** with sport-specific presets
+- **Scorebug layout & positioning**: adjustable per-sport — save custom positions as defaults for each sport
+- **Score flash animation**: toggle between top and bottom position
+- **Team names, colors, records, league/event text, kickoff/tip-off time**
+- **Sport-specific stats**:
+  - Soccer: half (1st/2nd/Extra Time)
+  - Basketball: quarter, fouls, timeouts
+  - Volleyball: sets, serving side, box score per set
+  - Baseball/Softball: inning, count (balls/strikes/outs), baserunners
+- **Break screen**: type (timeout/BRB/sponsor), title, sponsor name + tagline, footer text, QR code image URL
 
 ## Home team (EAC) and the opponent roster
 

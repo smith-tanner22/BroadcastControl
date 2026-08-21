@@ -4,9 +4,12 @@ Control: https://broadcast-backend.fly.dev/control.html
 
 # Broadcast Control — Backend
 
-Shared state server for the soccer overlay + control panel. One `mode` lives on
+Shared state server for multi-sport broadcast overlays + control panel. One `mode` and `sport` live on
 the server; every connected page (the overlay feeding YoloBox, and the control
 panel on your phone/tablet) stays in sync over WebSocket.
+
+Supports soccer, basketball, volleyball, baseball, and softball with sport-specific
+statistics and overlays.
 
 ## Run it
 
@@ -25,6 +28,25 @@ This starts a server on port 3000 (override with `PORT=8080 npm start`) serving:
   the game. Tap a scene button, bump the score, and it updates the overlay
   live.
 
+## Deployment
+
+This app is deployed on [Fly.io](https://fly.io) with automatic deployment via
+GitHub Actions. Every push to `main` triggers an automatic deploy — just commit
+and push, and the changes go live.
+
+**To deploy locally during development:**
+```bash
+cd broadcast-backend
+npm install
+npm start
+```
+
+**To deploy to Fly.io manually:**
+```bash
+cd broadcast-backend
+flyctl deploy
+```
+
 ## Where to run it
 
 Both the YoloBox and whatever device you're using for control need to reach
@@ -35,10 +57,8 @@ this server, so you have two options:
    use that laptop's local IP (e.g. `http://192.168.1.42:3000/overlay.html`)
    for the Web URL Overlay, and open the control panel on your phone on the
    same network.
-2. **Small always-on host** (Render, Railway, a cheap VPS, etc.): deploy this
-   folder there so you get a stable public URL that works from any network —
-   useful once you're doing this for a whole season and don't want to
-   re-find a local IP every gameday.
+2. **Cloud deployment** (production): deployed on Fly.io with automatic GitHub
+   Actions deployment on each push to `main`.
 
 ## Stream Deck integration (next step)
 
