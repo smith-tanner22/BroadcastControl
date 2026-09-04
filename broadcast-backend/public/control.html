@@ -190,7 +190,8 @@
   .clock-btn-row .clock-btn{height:76px;font-size:22px;}
   .clock-btn.start{background:var(--green);color:#08210f;border-color:var(--green);}
   .clock-btn.pause{background:var(--red);color:#2a0808;border-color:var(--red);}
-  .clock-visibility-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;}
+  .clock-visibility-row{display:flex;gap:10px;margin-top:10px;}
+  .clock-visibility-row .clock-btn{flex:1;font-size:13px;}
   .clock-btn.vis.active{background:var(--gold);color:#1a1400;border-color:var(--gold);}
   .clock-visibility-hint{font-size:12px;color:rgba(255,255,255,0.5);margin-top:8px;}
 
@@ -374,10 +375,11 @@
     <button class="clock-btn pause" id="clockPauseBtn">⏸ Pause</button>
   </div>
   <div class="clock-visibility-row">
-    <button class="clock-btn vis" id="clockShowBtn" data-visible="true">Show Clock</button>
-    <button class="clock-btn vis" id="clockHideBtn" data-visible="false">Hide Clock</button>
+    <button class="clock-btn vis" id="clockShowBtn" data-clock-mode="show">Show Clock</button>
+    <button class="clock-btn vis" id="clockHideBtn" data-clock-mode="hide">Hide Clock</button>
+    <button class="clock-btn vis" id="clockEliminateBtn" data-clock-mode="eliminate" data-sport-section="soccer">Eliminate Clock</button>
   </div>
-  <div class="clock-visibility-hint">Hiding the clock swaps it for a bordered, transparent window inside the scorebug so the camera feed underneath (e.g. the venue's live scoreboard) shows through instead.</div>
+  <div class="clock-visibility-hint">Hiding the clock swaps it for a bordered, transparent window inside the scorebug so the camera feed underneath (e.g. the venue's live scoreboard) shows through instead. Eliminating it (soccer only) removes that window entirely and pushes the two team panels flush together with no gap.</div>
 </section>
 
 <section data-sport-section="basketball" class="pri-secondary-stats">
@@ -731,8 +733,15 @@
     const display = fmtClock(currentClockSeconds(s));
     el.textContent = display;
     el.classList.toggle('running', s.clockRunning);
-    document.getElementById('clockShowBtn').classList.toggle('active', s.clockVisible !== false);
-    document.getElementById('clockHideBtn').classList.toggle('active', s.clockVisible === false);
+    // 'eliminate' only applies to soccer — if basketball somehow carries it
+    // over (e.g. it was set while on the soccer tab), fall back to 'hide',
+    // matching the overlay's own fallback so the highlighted button here
+    // never lies about what's actually on screen.
+    const clockMode = s.clockMode || 'show';
+    const effectiveClockMode = (clockMode === 'eliminate' && s.sport !== 'soccer') ? 'hide' : clockMode;
+    document.getElementById('clockShowBtn').classList.toggle('active', effectiveClockMode === 'show');
+    document.getElementById('clockHideBtn').classList.toggle('active', effectiveClockMode === 'hide');
+    document.getElementById('clockEliminateBtn').classList.toggle('active', effectiveClockMode === 'eliminate');
     document.getElementById('flashTopBtn').classList.toggle('active', s.scoreFlashPosition !== 'bottom');
     document.getElementById('flashBottomBtn').classList.toggle('active', s.scoreFlashPosition === 'bottom');
     // Mirror the live value into the editable field too, so the operator can
@@ -945,8 +954,9 @@
   });
   document.getElementById('clockStartBtn').addEventListener('click', () => send({ type: 'START_CLOCK' }));
   document.getElementById('clockPauseBtn').addEventListener('click', () => send({ type: 'PAUSE_CLOCK' }));
-  document.getElementById('clockShowBtn').addEventListener('click', () => send({ type: 'SET_CLOCK_VISIBLE', visible: true }));
-  document.getElementById('clockHideBtn').addEventListener('click', () => send({ type: 'SET_CLOCK_VISIBLE', visible: false }));
+  document.querySelectorAll('.clock-visibility-row .clock-btn.vis').forEach(btn => {
+    btn.addEventListener('click', () => send({ type: 'SET_CLOCK_MODE', mode: btn.dataset.clockMode }));
+  });
   document.getElementById('flashTopBtn').addEventListener('click', () => send({ type: 'SET_SCORE_FLASH_POSITION', position: 'top' }));
   document.getElementById('flashBottomBtn').addEventListener('click', () => send({ type: 'SET_SCORE_FLASH_POSITION', position: 'bottom' }));
 

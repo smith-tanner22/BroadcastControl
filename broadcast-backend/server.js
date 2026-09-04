@@ -53,10 +53,12 @@ const DEFAULT_STATE = {
   clockRunning: false,
   clockAnchorMs: null, // server epoch ms when the clock was last (re)started
   clockDirection: 'down', // 'down' | 'up'
-  // When false, the overlay hides the clock readout and shows an empty
-  // placeholder in its place instead — for games where we point a camera at
-  // the venue's physical scoreboard rather than keeping our own clock.
-  clockVisible: true,
+  // 'show' displays the running clock. 'hide' swaps it for an empty
+  // placeholder window instead — for games where we point a camera at the
+  // venue's physical scoreboard rather than keeping our own clock. 'eliminate'
+  // (soccer only) drops the clock and its whole column, pushing the two team
+  // panels flush together with no center gap at all.
+  clockMode: 'show', // 'show' | 'hide' | 'eliminate'
 
   // Soccer
   half: '1st Half',
@@ -134,7 +136,13 @@ function loadState() {
   try {
     const raw = fs.readFileSync(STATE_FILE, 'utf8');
     const loaded = JSON.parse(raw);
-    return Object.assign(base, loaded);
+    const merged = Object.assign(base, loaded);
+    // Migrate the old boolean clock toggle (pre clockMode) to the new 3-way mode.
+    if (loaded.clockMode === undefined && loaded.clockVisible !== undefined) {
+      merged.clockMode = loaded.clockVisible ? 'show' : 'hide';
+    }
+    delete merged.clockVisible;
+    return merged;
   } catch (e) {
     console.warn('No valid saved state found, starting with defaults:', e.message);
     return base;
@@ -305,8 +313,8 @@ function applyAction(action) {
       if (state.clockRunning) state.clockAnchorMs = Date.now();
       break;
 
-    case 'SET_CLOCK_VISIBLE':
-      state.clockVisible = !!action.visible;
+    case 'SET_CLOCK_MODE':
+      state.clockMode = action.mode;
       break;
 
     case 'SET_HALF':

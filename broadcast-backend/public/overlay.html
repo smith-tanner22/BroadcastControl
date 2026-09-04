@@ -31,6 +31,13 @@
      untouched. */
   .team.home{clip-path:polygon(0 -80px,100% -80px,100% 0,92% 100%,92% calc(100% + 80px),0 calc(100% + 80px));padding-right:44px;}
   .team.away{clip-path:polygon(8% -80px,100% -80px,100% calc(100% + 80px),0 calc(100% + 80px),0 100%,8% 0);padding-left:44px;}
+  /* Clock-eliminated mode: the center column is gone entirely, so the two
+     team panels sit directly against each other. Their inner edges (the ones
+     that normally slant inward to frame the center diamond) go flush/straight
+     instead, so the seam between them is a clean vertical line with no
+     diagonal notch and no leftover gap. Outer edges are untouched. */
+  .team.home.flush-inner{clip-path:none;padding-right:24px;}
+  .team.away.flush-inner{clip-path:none;padding-left:24px;}
   .team .stripe{position:absolute;top:0;bottom:0;width:8px;}
   .team.home .stripe{left:0;background:var(--home-color);}
   .team.away .stripe{right:0;background:var(--away-color);}
@@ -69,6 +76,10 @@
   .center-sm{background:var(--pitch);display:flex;flex-direction:column;align-items:center;justify-content:center;
     padding:6px 26px;position:relative;z-index:2;min-width:140px;}
   .center-sm::before{content:"";position:absolute;left:50%;top:8px;bottom:8px;width:1px;background:var(--line);transform:translateX(-50%);}
+  /* Clock-eliminated mode (soccer only): no clock, no camera window, no half
+     label — the whole center column is removed so the two team panels butt
+     up against each other with zero gap between them. */
+  .center-sm.eliminated{display:none;}
   /* With the clock hidden, the column's own opaque backing would otherwise
      sit behind the "transparent" scoreboard-box and block the camera feed
      from showing through — drop the fill (and the divider line drawn over
@@ -592,23 +603,28 @@
     document.getElementById('awayScore').textContent = s.awayScore;
     document.getElementById('period').textContent = periodLabel(s);
 
-    // Clock only means something for soccer/basketball, and can be toggled
-    // off in favor of a physical scoreboard shot showing through the camera.
-    // The two sports lean on that camera window differently: soccer's real
-    // scoreboards are basically just a clock, so we keep running our own
-    // half label and only swap the clock digits for the window. Basketball
-    // venue boards carry the quarter/fouls/timeouts too, so once the clock's
-    // off we drop all of our own readouts and hand the whole notch over.
+    // Clock only means something for soccer/basketball, and has three modes.
+    // 'hide' swaps the digits for a camera window (e.g. a physical venue
+    // scoreboard) — soccer keeps its own half label running alongside that
+    // window, basketball hands the whole notch over since its venue boards
+    // already carry quarter/fouls/timeouts. 'eliminate' (soccer only) drops
+    // the clock, the window, and the half label together and removes the
+    // whole center column so the two team panels sit flush with no gap.
     const clockEligible = s.sport === 'soccer' || s.sport === 'basketball';
-    const clockOn = clockEligible && s.clockVisible !== false;
-    const camHole = clockEligible && !clockOn;
+    const clockMode = clockEligible ? (s.clockMode || 'show') : 'show';
     const isBasketball = s.sport === 'basketball';
+    const clockEliminated = clockMode === 'eliminate' && !isBasketball;
+    const clockOn = clockMode === 'show' && !clockEliminated;
+    const camHole = clockEligible && !clockOn && !clockEliminated;
     document.getElementById('clock').classList.toggle('show', clockOn);
     document.getElementById('scoreboardBox').classList.toggle('show', camHole);
     document.getElementById('scoreboardBox').classList.toggle('bb', isBasketball);
     document.getElementById('centerSm').classList.toggle('cam-hole', camHole);
+    document.getElementById('centerSm').classList.toggle('eliminated', clockEliminated);
     document.getElementById('period').classList.toggle('hide-cam', camHole && isBasketball);
     document.getElementById('period').classList.toggle('cam-side', camHole && !isBasketball);
+    document.querySelector('.team.home').classList.toggle('flush-inner', clockEliminated);
+    document.querySelector('.team.away').classList.toggle('flush-inner', clockEliminated);
 
     // Sport-specific sub-stats on the scorebug
     const homeSub = document.getElementById('homeSubStat');
