@@ -63,13 +63,14 @@ buttons instead of (or alongside) the touch control panel.
 
 - **Sport**: soccer, basketball, volleyball, baseball, softball (each sport remembers its own scorebug position)
 - **Scene**: off / scorebug / matchup / halftime / break (defaults to scorebug on startup)
-- **Score, clock text, period/half/quarter/set label**
+- **Score, period/half/quarter/set label**. Soccer and basketball have no game clock — the scorebug always
+  shows the two team panels flush together with a half/quarter strip underneath.
 - **Halftime/intermission countdown** with sport-specific presets
 - **Scorebug layout & positioning**: adjustable per-sport — save custom positions as defaults for each sport
-- **Score flash animation**: toggle between top and bottom position
-- **Team names, colors, records, league/event text, kickoff/tip-off time**
+- **Score flash animation**: toggle between top and bottom position (defaults to bottom)
+- **Team names, colors, league/event text, kickoff/tip-off time**
 - **Sport-specific stats**:
-  - Soccer: half (1st/2nd/Extra Time)
+  - Soccer: half (1st/2nd)
   - Basketball: quarter, fouls, timeouts
   - Volleyball: sets, serving side, box score per set
   - Baseball/Softball: inning, count (balls/strikes/outs), baserunners

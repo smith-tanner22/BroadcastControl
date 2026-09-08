@@ -32,7 +32,7 @@
   }
 
   /* ---- Tablet/desktop: a real 2-column dashboard ----
-     Score/clock anchor column 1; the sport's quick stats move to the TOP of
+     Score anchors column 1; the sport's quick stats move to the TOP of
      column 2 (not buried at the bottom of column 1), with settings sinking
      below them — so both columns show their most-touched controls without
      scrolling, instead of column 2 sitting mostly empty. `#dashColA`/
@@ -117,8 +117,8 @@
 
   /* ---- Full reset (danger) ----
      Deliberately louder than the plain Reset Scores button — this wipes
-     clock + every sport-specific field too, so it gets a filled red
-     treatment plus a confirm modal instead of firing on a single tap. */
+     every sport-specific field too, so it gets a filled red treatment plus
+     a confirm modal instead of firing on a single tap. */
   .full-reset-btn{width:100%;height:48px;border-radius:10px;border:1px solid var(--red);
     background:var(--red);color:#2a0808;font-family:var(--display);font-weight:800;font-size:14px;
     letter-spacing:1px;text-transform:uppercase;margin-top:10px;}
@@ -178,18 +178,10 @@
 
   .half-row{display:flex;gap:8px;}
 
-  /* ---- Game clock ---- */
-  .clock-display{font-family:var(--display);font-weight:800;font-size:52px;letter-spacing:2px;
-    text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;
-    padding:14px 0;margin-bottom:12px;}
-  .clock-display.running{color:var(--gold);}
-  .clock-btn-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px;}
+  /* ---- Score flash position (shared button styling below) ---- */
   .clock-btn{height:48px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);
     color:var(--white);font-family:var(--display);font-weight:700;font-size:15px;letter-spacing:1px;
     text-transform:uppercase;}
-  .clock-btn-row .clock-btn{height:76px;font-size:22px;}
-  .clock-btn.start{background:var(--green);color:#08210f;border-color:var(--green);}
-  .clock-btn.pause{background:var(--red);color:#2a0808;border-color:var(--red);}
   .clock-visibility-row{display:flex;gap:10px;margin-top:10px;}
   .clock-visibility-row .clock-btn{flex:1;font-size:13px;}
   .clock-btn.vis.active{background:var(--gold);color:#1a1400;border-color:var(--gold);}
@@ -306,6 +298,29 @@
   </div>
 </section>
 
+<details id="layoutDetails" class="pri-layout-setup">
+  <summary>Scorebug Layout</summary>
+  <div class="details-body">
+    <div class="layout-editor-wrap" id="layoutEditorWrap">
+      <iframe id="layoutPreviewFrame" class="layout-preview-frame" src="/overlay.html?preview=scorebug"></iframe>
+      <div class="layout-guide-v" id="layoutGuideV"></div>
+      <div class="layout-guide-h" id="layoutGuideH"></div>
+      <div class="layout-proxy" id="layoutProxy">
+        <div class="layout-proxy-handle" id="layoutProxyHandle" title="Drag to resize"></div>
+      </div>
+    </div>
+    <div class="layout-readout" id="layoutReadout">x:0 y:0 scale:1.00</div>
+    <div class="row2">
+      <button class="apply-btn" id="layoutSaveBtn" style="margin-top:0;">Save Position</button>
+      <button class="reset-btn" id="layoutCancelBtn" style="margin-top:0;">Cancel</button>
+    </div>
+    <div class="row2">
+      <button class="apply-btn" id="layoutSaveForSportBtn" style="margin-top:10px;">Save as Default for <span id="sportLabelBtn">Soccer</span></button>
+      <button class="reset-btn" id="layoutResetForSportBtn" style="margin-top:10px;">Reset <span id="sportResetLabel">Soccer</span> to Default</button>
+    </div>
+  </div>
+</details>
+
 <section class="pri-score">
   <div class="section-label">Score</div>
   <div class="score-pair">
@@ -346,7 +361,6 @@
   <div class="half-row" id="halfRow">
     <button class="preset-btn" data-half="1st Half">1st</button>
     <button class="preset-btn" data-half="2nd Half">2nd</button>
-    <button class="preset-btn" data-half="Extra Time">ET</button>
   </div>
 </section>
 
@@ -360,26 +374,6 @@
     <button class="preset-btn" data-quarter="Q4">Q4</button>
     <button class="preset-btn" data-quarter="OT">OT</button>
   </div>
-</section>
-
-<!-- ============ GAME CLOCK (soccer + basketball) ============ -->
-<section data-sport-section="soccer basketball" class="pri-clock">
-  <div class="section-label">Game Clock</div>
-  <div class="clock-display" id="clockDisplay">00:00</div>
-  <div class="row2">
-    <div class="field"><label>Set time (mm:ss)</label><input type="text" id="clockInput" placeholder="45:00"></div>
-    <div class="field" style="justify-content:flex-end;"><button class="apply-btn" id="setClockBtn" style="margin-top:auto;">Set Clock</button></div>
-  </div>
-  <div class="clock-btn-row">
-    <button class="clock-btn start" id="clockStartBtn">▶ Start</button>
-    <button class="clock-btn pause" id="clockPauseBtn">⏸ Pause</button>
-  </div>
-  <div class="clock-visibility-row">
-    <button class="clock-btn vis" id="clockShowBtn" data-clock-mode="show">Show Clock</button>
-    <button class="clock-btn vis" id="clockHideBtn" data-clock-mode="hide">Hide Clock</button>
-    <button class="clock-btn vis" id="clockEliminateBtn" data-clock-mode="eliminate" data-sport-section="soccer">Eliminate Clock</button>
-  </div>
-  <div class="clock-visibility-hint">Hiding the clock swaps it for a bordered, transparent window inside the scorebug so the camera feed underneath (e.g. the venue's live scoreboard) shows through instead. Eliminating it (soccer only) removes that window entirely and pushes the two team panels flush together with no gap.</div>
 </section>
 
 <section data-sport-section="basketball" class="pri-secondary-stats">
@@ -596,10 +590,6 @@
         <input type="hidden" id="awayLogoBg" value="#FFFFFF">
       </div>
     </div>
-    <div class="row2">
-      <div class="field"><label>Home Record</label><input type="text" id="homeRecord" placeholder="8-2"></div>
-      <div class="field"><label>Away Record</label><input type="text" id="awayRecord" placeholder="6-4"></div>
-    </div>
     <div class="field"><label>League / Conference</label><input type="text" id="league"></div>
     <div class="field"><label>Division</label><input type="text" id="division"></div>
     <div class="field"><label>Event Title</label><input type="text" id="event"></div>
@@ -636,29 +626,6 @@
   </div>
 </section>
 
-<details id="layoutDetails" class="pri-layout-setup">
-  <summary>Scorebug Layout</summary>
-  <div class="details-body">
-    <div class="layout-editor-wrap" id="layoutEditorWrap">
-      <iframe id="layoutPreviewFrame" class="layout-preview-frame" src="/overlay.html?preview=scorebug"></iframe>
-      <div class="layout-guide-v" id="layoutGuideV"></div>
-      <div class="layout-guide-h" id="layoutGuideH"></div>
-      <div class="layout-proxy" id="layoutProxy">
-        <div class="layout-proxy-handle" id="layoutProxyHandle" title="Drag to resize"></div>
-      </div>
-    </div>
-    <div class="layout-readout" id="layoutReadout">x:0 y:0 scale:1.00</div>
-    <div class="row2">
-      <button class="apply-btn" id="layoutSaveBtn" style="margin-top:0;">Save Position</button>
-      <button class="reset-btn" id="layoutCancelBtn" style="margin-top:0;">Cancel</button>
-    </div>
-    <div class="row2">
-      <button class="apply-btn" id="layoutSaveForSportBtn" style="margin-top:10px;">Save as Default for <span id="sportLabelBtn">Soccer</span></button>
-      <button class="reset-btn" id="layoutResetForSportBtn" style="margin-top:10px;">Reset <span id="sportResetLabel">Soccer</span> to Default</button>
-    </div>
-  </div>
-</details>
-
 <div class="dash-col" id="dashColA"></div>
 <div class="dash-col" id="dashColB"></div>
 
@@ -668,7 +635,7 @@
   <div class="modal-box">
     <div class="modal-title">Full Reset?</div>
     <div class="modal-body">
-      This clears the score, clock, and all <strong id="fullResetSportName">Soccer</strong> game state
+      This clears the score and all <strong id="fullResetSportName">Soccer</strong> game state
       (half/quarter, fouls, timeouts, sets, count, runners — whatever applies). Team names, colors, and
       logos are kept.
     </div>
@@ -721,34 +688,6 @@
     return isNaN(n) ? null : n*60;
   }
 
-  function currentClockSeconds(s){
-    if(!s.clockRunning || s.clockAnchorMs == null) return s.clockSeconds;
-    const elapsed = (Date.now() - s.clockAnchorMs) / 1000;
-    const value = s.clockDirection === 'down' ? s.clockSeconds - elapsed : s.clockSeconds + elapsed;
-    return Math.max(0, value);
-  }
-
-  function renderClock(s){
-    const el = document.getElementById('clockDisplay');
-    const display = fmtClock(currentClockSeconds(s));
-    el.textContent = display;
-    el.classList.toggle('running', s.clockRunning);
-    // 'eliminate' only applies to soccer — if basketball somehow carries it
-    // over (e.g. it was set while on the soccer tab), fall back to 'hide',
-    // matching the overlay's own fallback so the highlighted button here
-    // never lies about what's actually on screen.
-    const clockMode = s.clockMode || 'show';
-    const effectiveClockMode = (clockMode === 'eliminate' && s.sport !== 'soccer') ? 'hide' : clockMode;
-    document.getElementById('clockShowBtn').classList.toggle('active', effectiveClockMode === 'show');
-    document.getElementById('clockHideBtn').classList.toggle('active', effectiveClockMode === 'hide');
-    document.getElementById('clockEliminateBtn').classList.toggle('active', effectiveClockMode === 'eliminate');
-    document.getElementById('flashTopBtn').classList.toggle('active', s.scoreFlashPosition !== 'bottom');
-    document.getElementById('flashBottomBtn').classList.toggle('active', s.scoreFlashPosition === 'bottom');
-    // Mirror the live value into the editable field too, so the operator can
-    // see the running time and nudge it without hunting for the big display —
-    // but don't fight them while they're actively typing a correction.
-    if(document.activeElement.id !== 'clockInput') document.getElementById('clockInput').value = display;
-  }
   // A preset (3:00, 15:00, etc.) is just an arming choice, same as the
   // Half/Quarter/Set rows — it stays highlighted once picked regardless of
   // scene switches, so "Set Break" always knows which duration to (re)start
@@ -758,15 +697,15 @@
       b.classList.toggle('active', parseInt(b.dataset.seconds, 10) === s.intermissionSelectedSeconds);
     });
   }
-  // Mirror the live break countdown into the custom-timer field, same trick
-  // as the game clock input — lets the operator see the running time and
-  // just click in to nudge it by a few seconds instead of retyping it whole.
+  // Mirror the live break countdown into the custom-timer field — lets the
+  // operator see the running time and just click in to nudge it by a few
+  // seconds instead of retyping it whole.
   function renderCustomTimerInput(s){
     if(document.activeElement.id === 'customTimerInput') return;
     const remaining = s.halftimeEndsAt ? Math.max(0, (s.halftimeEndsAt - Date.now()) / 1000) : 0;
     document.getElementById('customTimerInput').value = fmtClock(remaining);
   }
-  setInterval(() => { if(latestState){ renderClock(latestState); renderCustomTimerInput(latestState); } }, 250);
+  setInterval(() => { if(latestState){ renderCustomTimerInput(latestState); } }, 250);
 
   function renderVbBoxEditor(s){
     document.getElementById('vbBoxHomeLabel').textContent = s.home.toUpperCase();
@@ -812,7 +751,8 @@
     renderIntermissionPresets(s);
     renderCustomTimerInput(s);
 
-    renderClock(s);
+    document.getElementById('flashTopBtn').classList.toggle('active', s.scoreFlashPosition !== 'bottom');
+    document.getElementById('flashBottomBtn').classList.toggle('active', s.scoreFlashPosition === 'bottom');
 
     document.getElementById('homeFouls').textContent = s.fouls.home;
     document.getElementById('awayFouls').textContent = s.fouls.away;
@@ -856,8 +796,6 @@
     if(document.activeElement.id !== 'homeColor') document.getElementById('homeColor').value = s.homeColor;
     if(document.activeElement.id !== 'awayColor') document.getElementById('awayColor').value = s.awayColor;
     document.getElementById('awayLogo').value = s.awayLogo || '';
-    if(document.activeElement.id !== 'homeRecord') document.getElementById('homeRecord').value = s.homeRecord;
-    if(document.activeElement.id !== 'awayRecord') document.getElementById('awayRecord').value = s.awayRecord;
     if(document.activeElement.id !== 'league') document.getElementById('league').value = s.league;
     if(document.activeElement.id !== 'division') document.getElementById('division').value = s.division || '';
     if(document.activeElement.id !== 'event') document.getElementById('event').value = s.event;
@@ -948,15 +886,6 @@
     btn.addEventListener('click', () => send({ type: 'SET_VOLLEYBALL_SET', set: parseInt(btn.dataset.set, 10) }));
   });
 
-  document.getElementById('setClockBtn').addEventListener('click', () => {
-    const seconds = parseClock(document.getElementById('clockInput').value);
-    if(seconds !== null) send({ type: 'SET_CLOCK', seconds });
-  });
-  document.getElementById('clockStartBtn').addEventListener('click', () => send({ type: 'START_CLOCK' }));
-  document.getElementById('clockPauseBtn').addEventListener('click', () => send({ type: 'PAUSE_CLOCK' }));
-  document.querySelectorAll('.clock-visibility-row .clock-btn.vis').forEach(btn => {
-    btn.addEventListener('click', () => send({ type: 'SET_CLOCK_MODE', mode: btn.dataset.clockMode }));
-  });
   document.getElementById('flashTopBtn').addEventListener('click', () => send({ type: 'SET_SCORE_FLASH_POSITION', position: 'top' }));
   document.getElementById('flashBottomBtn').addEventListener('click', () => send({ type: 'SET_SCORE_FLASH_POSITION', position: 'bottom' }));
 
@@ -1139,7 +1068,7 @@
 
   const markTeamsSaved = makeSaveFeedback(document.getElementById('saveTeams'), [
     'homeName', 'awayName', 'homeFullName', 'awayFullName', 'homeColor', 'awayColor',
-    'homeLogoBg', 'awayLogoBg', 'homeRecord', 'awayRecord',
+    'homeLogoBg', 'awayLogoBg',
     'league', 'division', 'event', 'kickoff', 'awayTeamSelect'
   ]);
   const markBreakSaved = makeSaveFeedback(document.getElementById('saveBreak'), [
@@ -1159,8 +1088,6 @@
         awayLogo: document.getElementById('awayLogo').value,
         homeLogoBg: document.getElementById('homeLogoBg').value,
         awayLogoBg: document.getElementById('awayLogoBg').value,
-        homeRecord: document.getElementById('homeRecord').value,
-        awayRecord: document.getElementById('awayRecord').value,
         league: document.getElementById('league').value,
         division: document.getElementById('division').value,
         event: document.getElementById('event').value,
@@ -1285,6 +1212,24 @@
       let newLeft = layoutDragInfo.startLeft + dxPreview;
       let newTop = layoutDragInfo.startTop + dyPreview;
 
+      // The preview area clips anything dragged past its edges (overflow:
+      // hidden), so an over-drag loses its visual reference and can end up
+      // way outside the canvas with no indication — the operator only finds
+      // out when the saved position pushes the real scorebug off-screen.
+      // A center-only clamp isn't enough: the period strip is short relative
+      // to the team-panel row above it, so the box's center can stay on-
+      // canvas while that entire (visually dominant) team row is clipped
+      // off the top — which is exactly what "disappeared" looks like to an
+      // operator even though a sliver of the strip is technically still
+      // showing. Keep the WHOLE box within the canvas instead — it can be
+      // dragged flush against any edge, but never past it — so the full
+      // scorebug is always entirely visible no matter how far the drag
+      // overshoots. (If the box is scaled up larger than the canvas itself,
+      // this pins it in place rather than partially hiding it — an
+      // acceptable degenerate case for an oversized scorebug.)
+      newLeft = Math.min(Math.max(newLeft, 0), wrap.clientWidth - width);
+      newTop = Math.min(Math.max(newTop, 0), wrap.clientHeight - height);
+
       // Snap the box's own center to the canvas's center on each axis
       // independently, Instagram-story-style, and light up a dashed guide
       // for whichever axis is currently snapped.
@@ -1343,14 +1288,14 @@
   const dashColA = document.getElementById('dashColA');
   const dashColB = document.getElementById('dashColB');
   const mobileOrder = Array.from(dashGrid.children).filter(el => el !== dashColA && el !== dashColB);
-  // Soccer/basketball fill column 1 with the Game Clock below the score;
-  // volleyball/baseball/softball have no clock, so their own sport section
-  // (set/sets-won/serving, or inning/count/runners) takes that slot instead
-  // — otherwise column 1 would sit mostly empty for those sports while
-  // column 2 carried everything.
-  const dashColASelectors = ['.pri-score', '.pri-clock', '.pri-col1-sport', '.pri-reset'];
-  const dashColBSelectors = ['.pri-primary-stats', '.pri-secondary-stats', '.pri-scene', '.pri-break',
-    '.pri-flash-position', '.pri-team-setup', '.pri-break-setup', '.pri-layout-setup'];
+  // Soccer/basketball fill column 1 with the Half/Quarter section below the
+  // score; volleyball/baseball/softball have no such section here, so their
+  // own sport section (set/sets-won/serving, or inning/count/runners) takes
+  // that slot instead — otherwise column 1 would sit mostly empty for those
+  // sports while column 2 carried everything.
+  const dashColASelectors = ['.pri-score', '.pri-primary-stats', '.pri-col1-sport', '.pri-reset'];
+  const dashColBSelectors = ['.pri-secondary-stats', '.pri-scene', '.pri-layout-setup', '.pri-break',
+    '.pri-flash-position', '.pri-team-setup', '.pri-break-setup'];
 
   function applyDashboardMode(mql){
     if(mql.matches){

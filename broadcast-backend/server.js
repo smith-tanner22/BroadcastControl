@@ -41,24 +41,7 @@ const DEFAULT_STATE = {
   league: 'Arizona Community College Athletic Conference (ACCAC)',
   division: 'NJCAA Division I',
   event: 'Regular Season',
-  homeRecord: '0-0',
-  awayRecord: '0-0',
   kickoff: '7:00 PM',
-
-  // Game clock — shared engine used by soccer + basketball. Rather than
-  // ticking on the server, we store an anchor timestamp + direction and let
-  // every connected client compute the live value from Date.now(), the same
-  // trick already used for the halftime countdown below.
-  clockSeconds: 0,
-  clockRunning: false,
-  clockAnchorMs: null, // server epoch ms when the clock was last (re)started
-  clockDirection: 'down', // 'down' | 'up'
-  // 'show' displays the running clock. 'hide' swaps it for an empty
-  // placeholder window instead — for games where we point a camera at the
-  // venue's physical scoreboard rather than keeping our own clock. 'eliminate'
-  // (soccer only) drops the clock and its whole column, pushing the two team
-  // panels flush together with no center gap at all.
-  clockMode: 'show', // 'show' | 'hide' | 'eliminate'
 
   // Soccer
   half: '1st Half',
@@ -106,7 +89,7 @@ const DEFAULT_STATE = {
   // Scorebug position/size on the overlay canvas, adjustable via the overlay
   // page's own edit mode. x/y are pixel offsets from the default centered
   // position; scale is a uniform multiplier. {0,0,1} reproduces the default.
-  scoreFlashPosition: 'top',
+  scoreFlashPosition: 'bottom',
   scorebugLayout: { x: 0, y: 0, scale: 1 },
   // Sport-specific default positions for the scorebug — saved separately per
   // sport so switching doesn't lose the customized position for that sport.
@@ -137,11 +120,6 @@ function loadState() {
     const raw = fs.readFileSync(STATE_FILE, 'utf8');
     const loaded = JSON.parse(raw);
     const merged = Object.assign(base, loaded);
-    // Migrate the old boolean clock toggle (pre clockMode) to the new 3-way mode.
-    if (loaded.clockMode === undefined && loaded.clockVisible !== undefined) {
-      merged.clockMode = loaded.clockVisible ? 'show' : 'hide';
-    }
-    delete merged.clockVisible;
     return merged;
   } catch (e) {
     console.warn('No valid saved state found, starting with defaults:', e.message);
@@ -180,17 +158,6 @@ function broadcastEvent(event) {
   wss.clients.forEach((client) => {
     if (client.readyState === 1) client.send(msg);
   });
-}
-
-// Resolves the game clock to a concrete integer-second value *right now*,
-// whether it's running (computed from the anchor) or paused (stored as-is).
-function currentClockSeconds() {
-  if (!state.clockRunning || state.clockAnchorMs == null) return state.clockSeconds;
-  const elapsed = (Date.now() - state.clockAnchorMs) / 1000;
-  const value = state.clockDirection === 'down'
-    ? state.clockSeconds - elapsed
-    : state.clockSeconds + elapsed;
-  return Math.max(0, value);
 }
 
 // Ends the current half-inning: clears the count, flips Top/Bottom, and
@@ -247,19 +214,14 @@ function applyAction(action) {
       break;
 
     // Full game reset — for back-to-back games on the same sport. Clears
-    // score, clock, and every sport-specific in-game field, but leaves team
-    // identity (names/colors/logos/records) and league/event info alone
-    // since those usually carry over or get set once per broadcast.
+    // score and every sport-specific in-game field, but leaves team identity
+    // (names/colors/logos) and league/event info alone since those usually
+    // carry over or get set once per broadcast.
     case 'FULL_RESET': {
       const sport = action.sport || state.sport;
 
       state.homeScore = 0;
       state.awayScore = 0;
-
-      state.clockSeconds = 0;
-      state.clockRunning = false;
-      state.clockAnchorMs = null;
-      state.clockDirection = 'down';
 
       if (sport === 'soccer') {
         state.half = '1st Half';
@@ -282,40 +244,6 @@ function applyAction(action) {
       }
       break;
     }
-
-    // ---------------- Game clock (soccer + basketball) ----------------
-    case 'SET_CLOCK':
-      state.clockSeconds = Math.max(0, Math.round(action.seconds));
-      state.clockRunning = false;
-      state.clockAnchorMs = null;
-      break;
-
-    case 'START_CLOCK':
-      if (!state.clockRunning) {
-        state.clockRunning = true;
-        state.clockAnchorMs = Date.now();
-      }
-      break;
-
-    case 'PAUSE_CLOCK':
-      if (state.clockRunning) {
-        state.clockSeconds = Math.round(currentClockSeconds());
-        state.clockRunning = false;
-        state.clockAnchorMs = null;
-      }
-      break;
-
-    case 'SET_CLOCK_DIRECTION':
-      // Freeze the current value first so switching direction mid-run
-      // doesn't jump the clock.
-      state.clockSeconds = Math.round(currentClockSeconds());
-      state.clockDirection = action.direction;
-      if (state.clockRunning) state.clockAnchorMs = Date.now();
-      break;
-
-    case 'SET_CLOCK_MODE':
-      state.clockMode = action.mode;
-      break;
 
     case 'SET_HALF':
       state.half = action.text;

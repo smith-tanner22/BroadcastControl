@@ -23,5 +23,5 @@ primary_region = 'lax'
 
 [[mounts]]
   source = 'data'
-  destination = '/app/broadcast-backend/data'
+  destination = '/app/data'
   processes = ['app']

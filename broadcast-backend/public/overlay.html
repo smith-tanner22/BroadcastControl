@@ -12,18 +12,32 @@
     --home-color:#1F5FAE; --away-color:#B3232E;
     --display:'Barlow Condensed', sans-serif; --body:'Inter', sans-serif;
   }
-  html,body{margin:0;padding:0;background:transparent;width:1920px;height:1080px;overflow:hidden;font-family:var(--body);}
+  /* position:relative here is load-bearing: it's what makes body itself the
+     containing block for .scene's position:absolute below. Without it, an
+     absolutely-positioned element with no positioned ancestor sizes itself
+     against the actual browser viewport instead of this fixed 1920x1080
+     canvas — invisible whenever this page happens to be viewed (e.g. a
+     YoloBox capture, or a headless render) at exactly 1920x1080, but
+     silently mispositioning everything the moment it's opened in an
+     ordinary, differently-sized browser window. */
+  html,body{margin:0;padding:0;background:transparent;width:1920px;height:1080px;overflow:hidden;font-family:var(--body);position:relative;}
   .scene{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .35s ease;}
   .scene.active{opacity:1;}
 
   /* ---------- SCOREBUG ---------- */
+  /* .stage is the transform target for the operator's saved x/y/scale
+     position (see applyScorebugLayout) and what the control panel's layout
+     editor measures for its drag proxy, so both the team-panel row and the
+     period strip below it live inside it as stacked children, and move/
+     scale together automatically with no extra wiring. */
   #scene-scorebug .stage{
     position:absolute;bottom:48px;left:50%;transform:translateX(-50%);
-    display:flex;align-items:stretch;filter:drop-shadow(0 8px 24px rgba(0,0,0,0.45));
+    display:flex;flex-direction:column;filter:drop-shadow(0 8px 24px rgba(0,0,0,0.45));
   }
-  /* Pinned to the bottom of the stage row instead of the default stretch —
-     so when the center column grows tall for the camera window (below), the
-     side team panels stay their normal size and don't stretch to match. */
+  .bug-row{display:flex;align-items:stretch;}
+  /* Pinned to the bottom of the row instead of the default stretch — so when
+     the center column grows tall for the camera window (below), the side
+     team panels stay their normal size and don't stretch to match. */
   .team{position:relative;display:flex;align-items:center;gap:14px;background:var(--panel-alpha);padding:10px 28px;align-self:flex-end;}
   /* Top two points are pulled up into negative territory (a plain rectangular
      cap, no extra slant) purely so the score-flash pop-up isn't cropped by
@@ -31,13 +45,27 @@
      untouched. */
   .team.home{clip-path:polygon(0 -80px,100% -80px,100% 0,92% 100%,92% calc(100% + 80px),0 calc(100% + 80px));padding-right:44px;}
   .team.away{clip-path:polygon(8% -80px,100% -80px,100% calc(100% + 80px),0 calc(100% + 80px),0 100%,8% 0);padding-left:44px;}
-  /* Clock-eliminated mode: the center column is gone entirely, so the two
-     team panels sit directly against each other. Their inner edges (the ones
-     that normally slant inward to frame the center diamond) go flush/straight
-     instead, so the seam between them is a clean vertical line with no
-     diagonal notch and no leftover gap. Outer edges are untouched. */
+  /* Flush mode (soccer + basketball, permanently): the center column is gone
+     entirely, so the two team panels sit directly against each other. Their
+     inner edges (the ones that normally slant inward to frame the center
+     diamond) go flush/straight instead, so the seam between them is a clean
+     vertical line with no diagonal notch and no leftover gap. Outer edges
+     are untouched. */
   .team.home.flush-inner{clip-path:none;padding-right:24px;}
   .team.away.flush-inner{clip-path:none;padding-left:24px;}
+  /* Hairline seam between the two scores in flush mode — same divider
+     technique as .center-sm::before below. Hidden otherwise; .bug-divider
+     and #centerSm are never both visible at once, so whichever is hidden
+     just drops out of the row's flex flow. */
+  .bug-divider{display:none;align-self:stretch;width:1px;background:var(--line);}
+  .bug-divider.show{display:block;}
+  /* Half/quarter label strip for flush mode, filling the space the
+     eliminated center column used to carry that info in. Same fill as the
+     team panels so it reads as one continuous scorebug. */
+  .period-strip{display:none;background:var(--panel-alpha);text-align:center;padding:8px 0;}
+  .period-strip.show{display:block;}
+  .period-strip span{font-family:var(--body);font-weight:600;font-size:14px;
+    letter-spacing:3px;color:rgba(255,255,255,0.75);text-transform:uppercase;}
   .team .stripe{position:absolute;top:0;bottom:0;width:8px;}
   .team.home .stripe{left:0;background:var(--home-color);}
   .team.away .stripe{right:0;background:var(--away-color);}
@@ -76,48 +104,14 @@
   .center-sm{background:var(--pitch);display:flex;flex-direction:column;align-items:center;justify-content:center;
     padding:6px 26px;position:relative;z-index:2;min-width:140px;}
   .center-sm::before{content:"";position:absolute;left:50%;top:8px;bottom:8px;width:1px;background:var(--line);transform:translateX(-50%);}
-  /* Clock-eliminated mode (soccer only): no clock, no camera window, no half
-     label — the whole center column is removed so the two team panels butt
-     up against each other with zero gap between them. */
+  /* Flush mode (soccer + basketball, permanently): the whole center column
+     is removed so the two team panels butt up against each other with zero
+     gap between them — see .bug-divider/.period-strip above for what
+     replaces it. Volleyball/baseball/softball never set this class, so
+     their period info keeps rendering here exactly as before. */
   .center-sm.eliminated{display:none;}
-  /* With the clock hidden, the column's own opaque backing would otherwise
-     sit behind the "transparent" scoreboard-box and block the camera feed
-     from showing through — drop the fill (and the divider line drawn over
-     it) so the box is an actual hole through to whatever's underneath. */
-  .center-sm.cam-hole{background:transparent;}
-  .center-sm.cam-hole::before{display:none;}
-  .clock-sm{font-family:var(--display);font-weight:700;font-size:24px;color:var(--white);letter-spacing:1px;display:none;}
-  .clock-sm.show{display:block;}
-
-  /* Sits in the clock's slot in the scorebug's center column when the clock
-     is toggled off. No fill — the YoloBox layers this graphics page on top
-     of the live camera feed, so a transparent interior lets whatever the
-     camera sees (e.g. the venue's physical scoreboard) show through inside
-     a framed window, instead of a bare unmarked gap. Its height (plus
-     whatever else is left showing below it, like soccer's half label) is
-     what grows the center column taller — the side team panels are pinned
-     to the bottom of the row via .team's align-self so only the center
-     notch rises to make room. Basketball's window is bigger since it has to
-     fit the venue board's clock+quarter+timeouts+fouls all at once, where
-     soccer only needs to cover the clock digits. */
-  .scoreboard-box{width:220px;height:150px;border:1px solid var(--line);border-radius:4px;
-    background:transparent;display:none;margin:6px 0;}
-  .scoreboard-box.show{display:block;}
-  .scoreboard-box.bb{width:320px;height:280px;}
   .period-sm{font-family:var(--body);font-weight:600;font-size:12px;color:rgba(255,255,255,0.65);
     text-transform:uppercase;letter-spacing:2px;margin-top:2px;}
-  .period-sm.hide-cam{display:none;}
-  /* When the clock is hidden for a cam-hole sport that still wants its own
-     period label visible (soccer today), pull the label out of the vertically-
-     centered stack and pin it to the bottom-right inner corner of the center
-     column, so the vertical channel behind the transparent camera window
-     stays completely clear. */
-  .period-sm.cam-side{
-    position:absolute;
-    right:8px;
-    bottom:6px;
-    margin-top:0;
-  }
   .extra-sm{font-family:var(--body);font-weight:600;font-size:12px;color:var(--gold);
     text-transform:uppercase;letter-spacing:1px;margin-top:4px;display:none;}
   .extra-sm.show{display:block;}
@@ -183,8 +177,6 @@
     letter-spacing:0.5px;text-transform:uppercase;text-align:center;margin-top:4px;max-width:100%;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .team-full-lg:empty{display:none;}
-  .record{font-family:var(--body);font-weight:600;font-size:15px;color:rgba(255,255,255,0.55);
-    letter-spacing:1px;margin-top:6px;}
   .vs{font-family:var(--display);font-weight:700;font-size:34px;color:var(--white);
     position:relative;width:64px;height:64px;display:flex;align-items:center;justify-content:center;}
   .vs::before,.vs::after{content:"";position:absolute;width:1px;height:70px;background:var(--line);}
@@ -268,44 +260,46 @@
 
   <div class="scene" id="scene-scorebug">
     <div class="stage">
-      <div class="team home">
-        <div class="stripe"></div>
-        <div class="crest-sm" id="homeCrest">H</div>
-        <div class="name-col">
-          <div class="name-wrap"><div class="serve-dot" id="homeServe"></div><div class="name-sm" id="homeName">HOME</div></div>
-          <div class="name-full" id="homeFullName"></div>
+      <div class="bug-row">
+        <div class="team home">
+          <div class="stripe"></div>
+          <div class="crest-sm" id="homeCrest">H</div>
+          <div class="name-col">
+            <div class="name-wrap"><div class="serve-dot" id="homeServe"></div><div class="name-sm" id="homeName">HOME</div></div>
+            <div class="name-full" id="homeFullName"></div>
+          </div>
+          <div class="score-stack">
+            <div class="score-flash" id="homeFlash"></div>
+            <div class="score-sm" id="homeScore">0</div>
+            <div class="sub-stat" id="homeSubStat"></div>
+          </div>
         </div>
-        <div class="score-stack">
-          <div class="score-flash" id="homeFlash"></div>
-          <div class="score-sm" id="homeScore">0</div>
-          <div class="sub-stat" id="homeSubStat"></div>
+        <div class="bug-divider" id="bugDivider"></div>
+        <div class="center-sm" id="centerSm">
+          <div class="period-sm" id="period">1ST HALF</div>
+          <div class="mini-diamond" id="miniDiamond">
+            <div class="mbase second" id="mbSecond"></div>
+            <div class="mbase first" id="mbFirst"></div>
+            <div class="mbase third" id="mbThird"></div>
+          </div>
+          <div class="extra-sm" id="extra"></div>
+          <div class="vb-box-row" id="vbBoxRow"></div>
+        </div>
+        <div class="team away">
+          <div class="score-stack">
+            <div class="score-flash" id="awayFlash"></div>
+            <div class="score-sm" id="awayScore">0</div>
+            <div class="sub-stat" id="awaySubStat"></div>
+          </div>
+          <div class="name-col">
+            <div class="name-wrap"><div class="name-sm" id="awayName">AWAY</div><div class="serve-dot" id="awayServe"></div></div>
+            <div class="name-full" id="awayFullName"></div>
+          </div>
+          <div class="crest-sm" id="awayCrest">A</div>
+          <div class="stripe"></div>
         </div>
       </div>
-      <div class="center-sm" id="centerSm">
-        <div class="clock-sm" id="clock">00:00</div>
-        <div class="scoreboard-box" id="scoreboardBox"></div>
-        <div class="period-sm" id="period">1ST HALF</div>
-        <div class="mini-diamond" id="miniDiamond">
-          <div class="mbase second" id="mbSecond"></div>
-          <div class="mbase first" id="mbFirst"></div>
-          <div class="mbase third" id="mbThird"></div>
-        </div>
-        <div class="extra-sm" id="extra"></div>
-        <div class="vb-box-row" id="vbBoxRow"></div>
-      </div>
-      <div class="team away">
-        <div class="score-stack">
-          <div class="score-flash" id="awayFlash"></div>
-          <div class="score-sm" id="awayScore">0</div>
-          <div class="sub-stat" id="awaySubStat"></div>
-        </div>
-        <div class="name-col">
-          <div class="name-wrap"><div class="name-sm" id="awayName">AWAY</div><div class="serve-dot" id="awayServe"></div></div>
-          <div class="name-full" id="awayFullName"></div>
-        </div>
-        <div class="crest-sm" id="awayCrest">A</div>
-        <div class="stripe"></div>
-      </div>
+      <div class="period-strip" id="periodStrip"><span id="periodStripText"></span></div>
     </div>
   </div>
 
@@ -319,14 +313,12 @@
           <div class="crest-lg" id="mHomeCrest">H</div>
           <div class="team-name-lg" id="mHomeName">HOME</div>
           <div class="team-full-lg" id="mHomeFullName"></div>
-          <div class="record" id="homeRecord">0-0</div>
         </div>
         <div class="vs">VS</div>
         <div class="side away">
           <div class="crest-lg" id="mAwayCrest">A</div>
           <div class="team-name-lg" id="mAwayName">AWAY</div>
           <div class="team-full-lg" id="mAwayFullName"></div>
-          <div class="record" id="awayRecord">0-0</div>
         </div>
       </div>
       <div class="kickoff"><span id="kickoffLabel">Kickoff</span> <span id="kickoffTime">7:00 PM</span></div>
@@ -603,28 +595,18 @@
     document.getElementById('awayScore').textContent = s.awayScore;
     document.getElementById('period').textContent = periodLabel(s);
 
-    // Clock only means something for soccer/basketball, and has three modes.
-    // 'hide' swaps the digits for a camera window (e.g. a physical venue
-    // scoreboard) — soccer keeps its own half label running alongside that
-    // window, basketball hands the whole notch over since its venue boards
-    // already carry quarter/fouls/timeouts. 'eliminate' (soccer only) drops
-    // the clock, the window, and the half label together and removes the
-    // whole center column so the two team panels sit flush with no gap.
-    const clockEligible = s.sport === 'soccer' || s.sport === 'basketball';
-    const clockMode = clockEligible ? (s.clockMode || 'show') : 'show';
-    const isBasketball = s.sport === 'basketball';
-    const clockEliminated = clockMode === 'eliminate' && !isBasketball;
-    const clockOn = clockMode === 'show' && !clockEliminated;
-    const camHole = clockEligible && !clockOn && !clockEliminated;
-    document.getElementById('clock').classList.toggle('show', clockOn);
-    document.getElementById('scoreboardBox').classList.toggle('show', camHole);
-    document.getElementById('scoreboardBox').classList.toggle('bb', isBasketball);
-    document.getElementById('centerSm').classList.toggle('cam-hole', camHole);
-    document.getElementById('centerSm').classList.toggle('eliminated', clockEliminated);
-    document.getElementById('period').classList.toggle('hide-cam', camHole && isBasketball);
-    document.getElementById('period').classList.toggle('cam-side', camHole && !isBasketball);
-    document.querySelector('.team.home').classList.toggle('flush-inner', clockEliminated);
-    document.querySelector('.team.away').classList.toggle('flush-inner', clockEliminated);
+    // Soccer and basketball no longer carry a clock at all — the scorebug
+    // always renders flush for these two sports, with a period strip
+    // underneath instead of a center clock column. Volleyball/baseball/
+    // softball are unaffected and keep showing their period info via the
+    // center column exactly as before.
+    const flushMode = s.sport === 'soccer' || s.sport === 'basketball';
+    document.getElementById('centerSm').classList.toggle('eliminated', flushMode);
+    document.querySelector('.team.home').classList.toggle('flush-inner', flushMode);
+    document.querySelector('.team.away').classList.toggle('flush-inner', flushMode);
+    document.getElementById('bugDivider').classList.toggle('show', flushMode);
+    document.getElementById('periodStrip').classList.toggle('show', flushMode);
+    document.getElementById('periodStripText').textContent = periodLabel(s);
 
     // Sport-specific sub-stats on the scorebug
     const homeSub = document.getElementById('homeSubStat');
@@ -638,17 +620,11 @@
     document.getElementById('miniDiamond').classList.remove('show');
 
     if(s.sport === 'basketball'){
-      // Fouls/timeouts stay our own responsibility only while the digital
-      // clock is running the show — once it's off, the camera window is
-      // showing the real board's fouls/timeouts too, so ours would just
-      // duplicate (and likely drift from) what's already on screen.
-      if(clockOn){
-        homeSub.textContent = s.fouls.home + ' PF';
-        awaySub.textContent = s.fouls.away + ' PF';
-        homeSub.classList.add('show'); awaySub.classList.add('show');
-        extra.textContent = 'TO ' + s.timeouts.home + '-' + s.timeouts.away;
-        extra.classList.add('show');
-      }
+      homeSub.textContent = s.fouls.home + ' PF';
+      awaySub.textContent = s.fouls.away + ' PF';
+      homeSub.classList.add('show'); awaySub.classList.add('show');
+      extra.textContent = 'TO ' + s.timeouts.home + '-' + s.timeouts.away;
+      extra.classList.add('show');
     } else if(s.sport === 'volleyball'){
       extra.textContent = 'SETS ' + s.setsWon.home + '-' + s.setsWon.away;
       extra.classList.add('show');
@@ -673,8 +649,6 @@
     document.getElementById('mAwayFullName').textContent = s.awayFullName || '';
     setCrest(document.getElementById('mHomeCrest'), s.homeLogo, s.home.slice(0,1), s.homeColor, s.homeLogoBg);
     setCrest(document.getElementById('mAwayCrest'), s.awayLogo, s.away.slice(0,1), s.awayColor, s.awayLogoBg);
-    document.getElementById('homeRecord').textContent = s.homeRecord;
-    document.getElementById('awayRecord').textContent = s.awayRecord;
     document.getElementById('kickoffLabel').textContent = KICKOFF_LABELS[s.sport];
     document.getElementById('kickoffTime').textContent = s.kickoff;
 
@@ -724,7 +698,6 @@
       document.getElementById('qrPlaceholder').style.display = 'flex';
     }
 
-    renderClock(s);
     renderTimer(s);
     renderVbRecap(s);
     applyScorebugLayout(s.scorebugLayout || { x: 0, y: 0, scale: 1 });
@@ -733,23 +706,6 @@
   function applyScorebugLayout(layout){
     document.querySelector('#scene-scorebug .stage').style.transform =
       `translateX(-50%) translate(${layout.x}px, ${layout.y}px) scale(${layout.scale})`;
-  }
-
-  function fmtClock(totalSeconds){
-    const sec = Math.max(0, Math.round(totalSeconds));
-    const m = Math.floor(sec/60), s2 = sec%60;
-    return `${m}:${s2.toString().padStart(2,'0')}`;
-  }
-
-  function currentClockSeconds(s){
-    if(!s.clockRunning || s.clockAnchorMs == null) return s.clockSeconds;
-    const elapsed = (Date.now() - s.clockAnchorMs) / 1000;
-    const value = s.clockDirection === 'down' ? s.clockSeconds - elapsed : s.clockSeconds + elapsed;
-    return Math.max(0, value);
-  }
-
-  function renderClock(s){
-    document.getElementById('clock').textContent = fmtClock(currentClockSeconds(s));
   }
 
   function renderTimer(s){
@@ -769,7 +725,7 @@
   }
 
   let latestState = null;
-  setInterval(() => { if(latestState){ renderTimer(latestState); renderClock(latestState); } }, 250);
+  setInterval(() => { if(latestState){ renderTimer(latestState); } }, 250);
 
   // ---- WebSocket connection to the shared backend ----
   function connect(){
