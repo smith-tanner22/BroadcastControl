@@ -249,6 +249,14 @@
     border-radius:50%;background:var(--gold);border:2px solid #1a1400;cursor:nwse-resize;touch-action:none;}
   .layout-readout{text-align:center;font-family:var(--display);font-weight:700;font-size:14px;
     color:var(--dim);letter-spacing:1px;margin:10px 0 0;}
+  /* Transient confirmation after Save Position / Save as Default — the
+     layout editor has no persistent "dirty" input to grey a button out
+     against (see makeSaveFeedback), so this just flashes and fades on its
+     own timer instead. */
+  .layout-save-confirm{text-align:center;font-family:var(--display);font-weight:700;font-size:13px;
+    letter-spacing:1px;text-transform:uppercase;color:var(--green);margin-top:10px;
+    opacity:0;transition:opacity .3s ease;}
+  .layout-save-confirm.show{opacity:1;}
 
   /* Instagram-style center snap guides — shown only while the drag is
      actively snapped to dead-center on that axis. */
@@ -318,6 +326,7 @@
       <button class="apply-btn" id="layoutSaveForSportBtn" style="margin-top:10px;">Save as Default for <span id="sportLabelBtn">Soccer</span></button>
       <button class="reset-btn" id="layoutResetForSportBtn" style="margin-top:10px;">Reset <span id="sportResetLabel">Soccer</span> to Default</button>
     </div>
+    <div class="layout-save-confirm" id="layoutSaveConfirm"></div>
   </div>
 </details>
 
@@ -1262,13 +1271,28 @@
     updateSnapGuides(false, false);
   }
 
+  // Flashes a brief "Saved ✓" confirmation under the layout buttons, then
+  // fades it back out — a separate element rather than repurposing either
+  // button's own label, since layoutSaveForSportBtn's label contains the
+  // live-updating #sportLabelBtn span that render(s) keeps rewriting.
+  let layoutSaveConfirmTimer = null;
+  function flashLayoutSaveConfirm(message){
+    const el = document.getElementById('layoutSaveConfirm');
+    clearTimeout(layoutSaveConfirmTimer);
+    el.textContent = message;
+    el.classList.add('show');
+    layoutSaveConfirmTimer = setTimeout(() => el.classList.remove('show'), 2000);
+  }
+
   document.getElementById('layoutSaveBtn').addEventListener('click', () => {
     send({ type: 'SET_SCOREBUG_LAYOUT', x: layoutDraft.x, y: layoutDraft.y, scale: layoutDraft.scale });
+    flashLayoutSaveConfirm('Position Saved ✓');
   });
   document.getElementById('layoutCancelBtn').addEventListener('click', initLayoutEditor);
   document.getElementById('layoutSaveForSportBtn').addEventListener('click', () => {
     if(latestState){
       send({ type: 'SAVE_SCOREBUG_LAYOUT_FOR_SPORT', sport: latestState.sport, x: layoutDraft.x, y: layoutDraft.y, scale: layoutDraft.scale });
+      flashLayoutSaveConfirm('Saved as Default ✓');
     }
   });
   document.getElementById('layoutResetForSportBtn').addEventListener('click', () => {

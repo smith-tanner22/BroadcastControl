@@ -12,15 +12,22 @@
     --home-color:#1F5FAE; --away-color:#B3232E;
     --display:'Barlow Condensed', sans-serif; --body:'Inter', sans-serif;
   }
-  /* position:relative here is load-bearing: it's what makes body itself the
-     containing block for .scene's position:absolute below. Without it, an
-     absolutely-positioned element with no positioned ancestor sizes itself
-     against the actual browser viewport instead of this fixed 1920x1080
-     canvas — invisible whenever this page happens to be viewed (e.g. a
-     YoloBox capture, or a headless render) at exactly 1920x1080, but
-     silently mispositioning everything the moment it's opened in an
-     ordinary, differently-sized browser window. */
-  html,body{margin:0;padding:0;background:transparent;width:1920px;height:1080px;overflow:hidden;font-family:var(--body);position:relative;}
+  /* html is left at its natural (actual viewport) size — overflow:hidden
+     just keeps it scrollbar-free. body is the fixed 1920x1080 canvas: every
+     position:absolute scene positions itself against body's box (position:
+     relative here is load-bearing for that — without it, an absolutely-
+     positioned element with no positioned ancestor sizes itself against the
+     actual viewport instead, which is what silently broke positioning
+     whenever this page was opened at anything other than exactly 1920x1080).
+     body is then scaled+centered to fit whatever viewport is actually
+     showing it (see fitToViewport() below) — a YoloBox capture or headless
+     render at exactly 1920x1080 gets scale 1 (a no-op), while an ordinary,
+     differently-sized browser window (or the control panel's own layout-
+     preview iframe, which is deliberately sized to exactly 1920x1080 for
+     the same reason) still sees the whole canvas with nothing clipped off
+     an edge. */
+  html{margin:0;padding:0;overflow:hidden;background:transparent;}
+  body{margin:0;padding:0;background:transparent;width:1920px;height:1080px;overflow:hidden;font-family:var(--body);position:relative;transform-origin:0 0;}
   .scene{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .35s ease;}
   .scene.active{opacity:1;}
 
@@ -459,6 +466,20 @@
   </div>
 
 <script>
+  // Scales+centers the fixed 1920x1080 canvas (body) to fit whatever
+  // viewport is actually showing this page — see the CSS comment above body
+  // for why. Inside the control panel's layout-preview iframe this always
+  // computes scale 1 (the iframe's own viewport is hard-set to 1920x1080),
+  // so it never fights that iframe's own external scale() from the parent.
+  function fitToViewport(){
+    const scale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+    const offsetX = (window.innerWidth - 1920 * scale) / 2;
+    const offsetY = (window.innerHeight - 1080 * scale) / 2;
+    document.body.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
+  }
+  fitToViewport();
+  window.addEventListener('resize', fitToViewport);
+
   const SCENES = ['scorebug','matchup','halftime','break','vb-recap','water','final'];
   const KICKOFF_LABELS = { soccer:'Kickoff', basketball:'Tip-off', volleyball:'First Serve', baseball:'First Pitch', softball:'First Pitch' };
   const HALFTIME_TITLES = { soccer:'Halftime', basketball:'Halftime', volleyball:'Set Break', baseball:'Inning Break', softball:'Inning Break' };
