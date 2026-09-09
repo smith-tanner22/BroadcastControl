@@ -190,11 +190,12 @@ function applyAction(action) {
 
     case 'SET_MODE':
       state.mode = action.mode;
-      // Cutting to the halftime/"Set Break" scene (re)starts its countdown
+      // Cutting to the halftime/"Set Break" scene (or volleyball's
+      // "Timeout" scene, which shares the same countdown) (re)starts it
       // from whatever preset is armed, every time — so the operator never
       // has to separately start a timer, and re-tapping the scene button
       // (e.g. for the next set's break) always resets the clock.
-      if (action.mode === 'halftime') {
+      if (action.mode === 'halftime' || action.mode === 'timeout') {
         const seconds = state.intermissionSelectedSeconds || DEFAULT_INTERMISSION_SECONDS[state.sport] || 900;
         state.intermissionSelectedSeconds = seconds;
         state.halftimeEndsAt = Date.now() + seconds * 1000;
@@ -260,9 +261,16 @@ function applyAction(action) {
       state.intermissionSelectedSeconds = Math.max(1, Math.round(action.seconds));
       // If the break scene is already live, switching presets should restart
       // the on-air countdown right away rather than waiting for another tap.
-      if (state.mode === 'halftime') {
+      if (state.mode === 'halftime' || state.mode === 'timeout') {
         state.halftimeEndsAt = Date.now() + state.intermissionSelectedSeconds * 1000;
       }
+      break;
+
+    // Explicit stop for the operator's "Start"/"Stop" timer controls —
+    // separate from cutting away from the scene, since the countdown should
+    // be pauseable without also having to leave Set Break/Timeout on air.
+    case 'STOP_HALFTIME_TIMER':
+      state.halftimeEndsAt = null;
       break;
 
     // ---------------- Basketball ----------------

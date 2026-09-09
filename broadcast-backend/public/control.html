@@ -154,6 +154,23 @@
   .palette-swatch{width:30px;height:30px;border-radius:6px;border:1px solid var(--line);padding:0;cursor:pointer;}
   .palette-swatch.selected{border:2px solid var(--white);}
 
+  /* ---- Shade slider ----
+     A primary-color palette pick (or a hand-typed hex) sets the base hue/
+     saturation; this slider then only moves lightness, so the operator can
+     dial a jersey-accurate shade instead of hunting for one of a huge list
+     of near-duplicate swatches. Custom-styled (not the bare native slider)
+     to match the dark theme and to fit a light<->dark gradient track that
+     makes the direction of travel obvious without reading the labels. */
+  .shade-row{display:flex;align-items:center;gap:8px;margin-top:8px;}
+  .shade-row-label{font-size:10px;font-weight:600;color:var(--dim);letter-spacing:0.5px;
+    text-transform:uppercase;flex-shrink:0;}
+  .shade-slider{-webkit-appearance:none;appearance:none;flex:1;height:8px;border-radius:4px;
+    background:linear-gradient(90deg,#000,var(--slider-hue,#888),#fff);outline:none;}
+  .shade-slider::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;
+    background:var(--white);border:2px solid var(--panel);box-shadow:0 0 0 1px var(--line);cursor:pointer;}
+  .shade-slider::-moz-range-thumb{width:20px;height:20px;border-radius:50%;
+    background:var(--white);border:2px solid var(--panel);box-shadow:0 0 0 1px var(--line);cursor:pointer;}
+
   .preset-row{display:flex;gap:8px;margin-bottom:10px;}
   .preset-btn{flex:1;height:46px;border-radius:10px;border:1px solid var(--line);background:var(--panel);
     color:var(--white);font-family:var(--display);font-weight:700;font-size:15px;}
@@ -272,6 +289,24 @@
   .custom-timer-row input{flex:1;}
   .custom-timer-row button{flex:1;}
 
+  /* ---- Live Start/Stop for the intermission/between-sets/timeout timer ----
+     The countdown used to only start as a side effect of tapping the scene
+     button, with the running value visible nowhere but mirrored quietly
+     into the custom-duration input — easy to miss. This gives it its own
+     unmistakable readout plus explicit controls, independent of whichever
+     scene happens to be live. */
+  .timer-live-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;
+    padding:10px 12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;}
+  .timer-live-readout{font-family:var(--display);font-weight:800;font-size:28px;
+    min-width:76px;color:var(--dim);letter-spacing:0.5px;}
+  .timer-live-readout.running{color:var(--gold);}
+  .timer-start-btn,.timer-stop-btn{flex:1;height:44px;border-radius:9px;
+    font-family:var(--display);font-weight:700;font-size:14px;letter-spacing:1px;text-transform:uppercase;}
+  .timer-start-btn{background:var(--gold);color:#1a1400;border:1px solid var(--gold);}
+  .timer-start-btn:disabled{background:var(--panel-2);color:var(--dim);border-color:var(--line);opacity:0.7;}
+  .timer-stop-btn{background:transparent;color:var(--red);border:1px solid var(--red);}
+  .timer-stop-btn:disabled{color:var(--dim);border-color:var(--line);opacity:0.7;}
+
   [data-sport-section]{display:none;}
 </style>
 </head>
@@ -299,6 +334,7 @@
     <button class="mode-btn" data-mode="scorebug">Scorebug</button>
     <button class="mode-btn" data-mode="matchup">Matchup</button>
     <button class="mode-btn" data-mode="halftime" id="halftimeModeBtn">Halftime</button>
+    <button class="mode-btn" data-mode="timeout" data-sport-section="volleyball" data-show-display="flex">Timeout</button>
     <button class="mode-btn" data-mode="break">Break</button>
     <button class="mode-btn" data-mode="final">Final</button>
     <button class="mode-btn" data-mode="water" data-sport-section="soccer" data-show-display="flex">Water Break</button>
@@ -529,6 +565,11 @@
 
 <section class="pri-break">
   <div class="section-label" id="intermissionLabel">Intermission Timer</div>
+  <div class="timer-live-row">
+    <div class="timer-live-readout" id="timerLiveReadout">0:00</div>
+    <button class="timer-start-btn" id="timerStartBtn">▶ Start</button>
+    <button class="timer-stop-btn" id="timerStopBtn">■ Stop</button>
+  </div>
   <div class="preset-row" data-sport-preset="soccer basketball baseball softball">
     <button class="preset-btn" data-seconds="900">15:00</button>
     <button class="preset-btn" data-seconds="600">10:00</button>
@@ -569,6 +610,11 @@
           <input type="text" id="homeColor" placeholder="#1F5FAE" maxlength="7">
         </div>
         <div class="palette-row" id="homePalette"></div>
+        <div class="shade-row">
+          <span class="shade-row-label">Dark</span>
+          <input type="range" class="shade-slider" id="homeShade" min="5" max="95" value="50" step="1">
+          <span class="shade-row-label">Light</span>
+        </div>
       </div>
       <div class="field"><label>Away Color</label>
         <div class="color-row">
@@ -576,6 +622,11 @@
           <input type="text" id="awayColor" placeholder="#B3232E" maxlength="7">
         </div>
         <div class="palette-row" id="awayPalette"></div>
+        <div class="shade-row">
+          <span class="shade-row-label">Dark</span>
+          <input type="range" class="shade-slider" id="awayShade" min="5" max="95" value="50" step="1">
+          <span class="shade-row-label">Light</span>
+        </div>
       </div>
     </div>
     <!-- Home logo is permanently EAC's crest; away logo comes from the roster
@@ -660,8 +711,11 @@
   let ws;
 
   const KICKOFF_LABELS = { soccer:'Kickoff Time', basketball:'Tip-off Time', volleyball:'First Serve Time', baseball:'First Pitch Time', softball:'First Pitch Time' };
-  const INTERMISSION_LABELS = { soccer:'Halftime Timer', basketball:'Halftime Timer', volleyball:'Between-Sets Timer', baseball:'Inning-Break Timer', softball:'Inning-Break Timer' };
+  const INTERMISSION_LABELS = { soccer:'Halftime Timer', basketball:'Halftime Timer', volleyball:'Between-Sets / Timeout Timer', baseball:'Inning-Break Timer', softball:'Inning-Break Timer' };
   const HALFTIME_BTN_LABELS = { soccer:'Halftime', basketball:'Halftime', volleyball:'Set Break', baseball:'Inning Break', softball:'Inning Break' };
+  // Mirrors server.js's DEFAULT_INTERMISSION_SECONDS — only used as a
+  // fallback for the "Start" button when no preset has been armed yet.
+  const DEFAULT_INTERMISSION_SECONDS = { soccer:900, basketball:900, volleyball:180, baseball:900, softball:900 };
 
   function connect(){
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -714,7 +768,33 @@
     const remaining = s.halftimeEndsAt ? Math.max(0, (s.halftimeEndsAt - Date.now()) / 1000) : 0;
     document.getElementById('customTimerInput').value = fmtClock(remaining);
   }
-  setInterval(() => { if(latestState){ renderCustomTimerInput(latestState); } }, 250);
+  // The obvious, hard-to-miss version of the same countdown — a dedicated
+  // readout plus Start/Stop buttons that grey out to reflect whether the
+  // timer is actually running, independent of the custom-duration field
+  // above and of whichever scene is currently on air.
+  function renderTimerLive(s){
+    const running = !!s.halftimeEndsAt && s.halftimeEndsAt > Date.now();
+    const remaining = s.halftimeEndsAt ? Math.max(0, (s.halftimeEndsAt - Date.now()) / 1000) : 0;
+    const readout = document.getElementById('timerLiveReadout');
+    readout.textContent = fmtClock(remaining);
+    readout.classList.toggle('running', running);
+    document.getElementById('timerStartBtn').disabled = running;
+    document.getElementById('timerStopBtn').disabled = !running;
+  }
+  setInterval(() => {
+    if(!latestState) return;
+    renderCustomTimerInput(latestState);
+    renderTimerLive(latestState);
+  }, 250);
+  document.getElementById('timerStartBtn').addEventListener('click', () => {
+    const sport = latestState ? latestState.sport : 'soccer';
+    const seconds = (latestState && latestState.intermissionSelectedSeconds)
+      || DEFAULT_INTERMISSION_SECONDS[sport] || 900;
+    send({ type: 'START_HALFTIME_TIMER', seconds });
+  });
+  document.getElementById('timerStopBtn').addEventListener('click', () => {
+    send({ type: 'STOP_HALFTIME_TIMER' });
+  });
 
   function renderVbBoxEditor(s){
     document.getElementById('vbBoxHomeLabel').textContent = s.home.toUpperCase();
@@ -759,6 +839,7 @@
     document.querySelectorAll('#setRow .preset-btn').forEach(b => b.classList.toggle('active', parseInt(b.dataset.set,10) === s.volleyballSet));
     renderIntermissionPresets(s);
     renderCustomTimerInput(s);
+    renderTimerLive(s);
 
     document.getElementById('flashTopBtn').classList.toggle('active', s.scoreFlashPosition !== 'bottom');
     document.getElementById('flashBottomBtn').classList.toggle('active', s.scoreFlashPosition === 'bottom');
@@ -793,6 +874,8 @@
     document.getElementById('awayColorPreview').style.background = s.awayColor;
     markSelectedSwatch('homePalette', s.homeColor);
     markSelectedSwatch('awayPalette', s.awayColor);
+    syncShadeControls('home', s.homeColor);
+    syncShadeControls('away', s.awayColor);
     syncAwayTeamSelect(s);
 
     syncLogoBgButtons(s);
@@ -963,14 +1046,79 @@
     '#FFFFFF', // White
     '#FF69B4'  // Pink (breast cancer awareness)
   ];
+  // Curated to one swatch per distinct hue (a "primary colors" set) instead
+  // of a long list of near-duplicate shades — the shade slider below now
+  // covers lighter/darker variations of whichever one is picked, so getting
+  // an opponent's jersey shade right is "pick the hue, then drag" instead of
+  // "hunt for the closest of 20+ fixed swatches".
   const AWAY_COLOR_PALETTE = [
-    '#1F5FAE', '#3498DB', '#1B2A4A', '#16A085', '#008080',
-    '#3CA35A', '#7CB518', '#6B8E23', '#F1C40F', '#D4AF37',
-    '#E67E22', '#C24343', '#B3232E', '#DC143C', '#5C1A1B',
-    '#8E44AD', '#4B0082', '#E91E8C', '#6D4C41', '#2C3E50',
-    '#7F8C8D', '#000000', '#FFFFFF'
+    '#C0392B', // Red
+    '#E67E22', // Orange
+    '#D4AF37', // Gold
+    '#F1C40F', // Yellow
+    '#27AE60', // Green
+    '#16A085', // Teal
+    '#2E86C1', // Sky Blue
+    '#1F5FAE', // Blue (default)
+    '#1B2A4A', // Navy
+    '#8E44AD', // Purple
+    '#C2185B', // Magenta/Pink
+    '#7B241C', // Maroon
+    '#6D4C41', // Brown
+    '#000000', // Black
+    '#FFFFFF', // White
+    '#7F8C8D'  // Gray
   ];
-  function buildPalette(containerId, inputId, previewId, palette){
+
+  // ---- Shade slider support: base hue/saturation + a lightness slider ----
+  function hexToHsl(hex){
+    const m = /^#?([0-9a-f]{6})$/i.exec((hex || '').trim());
+    if(!m) return null;
+    const r = parseInt(m[1].slice(0,2),16)/255, g = parseInt(m[1].slice(2,4),16)/255, b = parseInt(m[1].slice(4,6),16)/255;
+    const max = Math.max(r,g,b), min = Math.min(r,g,b);
+    let h = 0, s = 0;
+    const l = (max+min)/2;
+    if(max !== min){
+      const d = max - min;
+      s = l > 0.5 ? d/(2-max-min) : d/(max+min);
+      switch(max){
+        case r: h = (g-b)/d + (g<b?6:0); break;
+        case g: h = (b-r)/d + 2; break;
+        default: h = (r-g)/d + 4;
+      }
+      h *= 60;
+    }
+    return { h, s: s*100, l: l*100 };
+  }
+  function hslToHex(h, s, l){
+    s /= 100; l /= 100;
+    const c = (1 - Math.abs(2*l - 1)) * s;
+    const x = c * (1 - Math.abs((h/60) % 2 - 1));
+    const m = l - c/2;
+    let rgb;
+    if(h < 60) rgb = [c,x,0];
+    else if(h < 120) rgb = [x,c,0];
+    else if(h < 180) rgb = [0,c,x];
+    else if(h < 240) rgb = [0,x,c];
+    else if(h < 300) rgb = [x,0,c];
+    else rgb = [c,0,x];
+    const toHex = v => Math.round((v+m)*255).toString(16).padStart(2,'0');
+    return '#' + (toHex(rgb[0])+toHex(rgb[1])+toHex(rgb[2])).toUpperCase();
+  }
+  // The slider only ever moves lightness — hue/saturation are "the base",
+  // set whenever a swatch is clicked or a hex is typed, and stay fixed while
+  // dragging so the slider always reads as darker<->lighter of that color.
+  const shadeBase = { home: { h: 0, s: 0 }, away: { h: 0, s: 0 } };
+  function syncShadeControls(side, hex){
+    const hsl = hexToHsl(hex);
+    if(!hsl) return;
+    shadeBase[side] = { h: hsl.h, s: hsl.s };
+    const slider = document.getElementById(side + 'Shade');
+    if(document.activeElement !== slider) slider.value = Math.round(hsl.l);
+    slider.style.setProperty('--slider-hue', hslToHex(hsl.h, hsl.s, 50));
+  }
+
+  function buildPalette(containerId, inputId, previewId, side, palette){
     const container = document.getElementById(containerId);
     palette.forEach(hex => {
       const btn = document.createElement('button');
@@ -984,6 +1132,7 @@
         input.dispatchEvent(new Event('input', { bubbles: true }));
         document.getElementById(previewId).style.background = hex;
         markSelectedSwatch(containerId, hex);
+        syncShadeControls(side, hex);
       });
       container.appendChild(btn);
     });
@@ -993,8 +1142,27 @@
       btn.classList.toggle('selected', btn.dataset.hex.toLowerCase() === (hex || '').toLowerCase());
     });
   }
-  buildPalette('homePalette', 'homeColor', 'homeColorPreview', HOME_COLOR_PALETTE);
-  buildPalette('awayPalette', 'awayColor', 'awayColorPreview', AWAY_COLOR_PALETTE);
+  buildPalette('homePalette', 'homeColor', 'homeColorPreview', 'home', HOME_COLOR_PALETTE);
+  buildPalette('awayPalette', 'awayColor', 'awayColorPreview', 'away', AWAY_COLOR_PALETTE);
+  document.getElementById('homeShade').style.setProperty('--slider-hue', '#4B1E78');
+  document.getElementById('awayShade').style.setProperty('--slider-hue', '#1F5FAE');
+
+  function wireShadeSlider(side, colorInputId, previewId, paletteId){
+    document.getElementById(side + 'Shade').addEventListener('input', (e) => {
+      const hex = hslToHex(shadeBase[side].h, shadeBase[side].s, parseInt(e.target.value, 10));
+      const input = document.getElementById(colorInputId);
+      input.value = hex;
+      document.getElementById(previewId).style.background = hex;
+      markSelectedSwatch(paletteId, hex);
+      // 'change' (not 'input') — updates the Save-button dirty state without
+      // looping back through the color <input>'s own 'input' listener, which
+      // would re-derive hue/sat from this already-derived hex on every drag
+      // tick and could drift slightly from rounding.
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  }
+  wireShadeSlider('home', 'homeColor', 'homeColorPreview', 'homePalette');
+  wireShadeSlider('away', 'awayColor', 'awayColorPreview', 'awayPalette');
 
   // Opponent roster — edit /teams.json to add/change teams, no code changes needed.
   let AWAY_TEAMS = [];
@@ -1042,16 +1210,19 @@
     document.getElementById('awayColor').value = team.color;
     document.getElementById('awayColorPreview').style.background = team.color;
     markSelectedSwatch('awayPalette', team.color);
+    syncShadeControls('away', team.color);
     document.getElementById('awayLogo').value = team.logo || '';
     setAwayFieldsLocked(true);
   });
   document.getElementById('homeColor').addEventListener('input', (e) => {
     document.getElementById('homeColorPreview').style.background = e.target.value;
     markSelectedSwatch('homePalette', e.target.value);
+    syncShadeControls('home', e.target.value);
   });
   document.getElementById('awayColor').addEventListener('input', (e) => {
     document.getElementById('awayColorPreview').style.background = e.target.value;
     markSelectedSwatch('awayPalette', e.target.value);
+    syncShadeControls('away', e.target.value);
   });
 
   // Save buttons otherwise give no feedback that the click landed — grey out

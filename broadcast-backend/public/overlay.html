@@ -7,7 +7,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --pitch:#0B3D2E; --panel:#12181A; --panel-alpha:rgba(18,24,26,0.94);
+    /* EAC brand purple — deep enough to hold contrast for the white/gold
+       text that sits on it (period, box score, mini-diamond). Was a soccer-
+       pitch green left over from before the scorebug's colors were branded. */
+    --center-bg:#2A1044; --panel:#12181A; --panel-alpha:rgba(18,24,26,0.94);
     --white:#FFFFFF; --gold:#D4AF37; --line:rgba(255,255,255,0.14);
     --home-color:#1F5FAE; --away-color:#B3232E;
     --display:'Barlow Condensed', sans-serif; --body:'Inter', sans-serif;
@@ -108,7 +111,7 @@
     letter-spacing:1px;text-transform:uppercase;margin-top:-4px;display:none;}
   .sub-stat.show{display:block;}
   @keyframes pop{0%{transform:scale(1);color:var(--gold);}40%{transform:scale(1.35);color:var(--gold);}100%{transform:scale(1);color:var(--white);}}
-  .center-sm{background:var(--pitch);display:flex;flex-direction:column;align-items:center;justify-content:center;
+  .center-sm{background:var(--center-bg);display:flex;flex-direction:column;align-items:center;justify-content:center;
     padding:6px 26px;position:relative;z-index:2;min-width:140px;}
   .center-sm::before{content:"";position:absolute;left:50%;top:8px;bottom:8px;width:1px;background:var(--line);transform:translateX(-50%);}
   /* Flush mode (soccer + basketball, permanently): the whole center column
@@ -158,11 +161,18 @@
 
   /* ---------- SHARED CARD (matchup / halftime / break) ---------- */
   .card{position:absolute;top:50%;left:50%;transform:translate(-50%,-46%) scale(0.96);
-    background:var(--panel-alpha);border:1px solid var(--line);
+    background:var(--panel-alpha);
+    /* Brand accent frame — tied to --home-color (always EAC's purple,
+       whatever exact shade is dialed in) rather than hardcoded, so it stays
+       correct if that shade ever changes. .match-final (volleyball's Final
+       scene only) overrides this to gold below, so a completed match reads
+       differently at a glance from Set Break/Timeout's purple frame. */
+    border:4px solid var(--home-color);
     display:flex;flex-direction:column;align-items:center;
-    transition:opacity .5s ease, transform .5s ease;
+    transition:opacity .5s ease, transform .5s ease, border-color .3s ease;
     filter:drop-shadow(0 20px 50px rgba(0,0,0,0.5));}
   .scene.active .card{transform:translate(-50%,-50%) scale(1);}
+  .card.match-final{border-color:var(--gold);}
 
   #scene-matchup .card{width:1180px;padding:52px 60px 44px;}
   .eyebrow{font-family:var(--display);font-weight:700;font-size:20px;letter-spacing:6px;
@@ -246,6 +256,23 @@
   .vb-set-num{font-family:var(--display);font-weight:700;font-size:30px;color:rgba(255,255,255,0.4);}
   .vb-set-num.win{color:var(--white);}
   .vb-set-num.live{color:var(--gold);}
+  /* Countdown for Set Break / Timeout — same halftimeEndsAt clock as the
+     plain halftime scene's #timer, just mirrored in here too since this
+     bigger recap card is what volleyball actually shows for both. Hidden
+     on the Final scene, where a countdown makes no sense. */
+  .vb-recap-timer-wrap{margin-top:28px;text-align:center;}
+  .vb-recap-timer-wrap.hide{display:none;}
+  /* Match Final — takes over the same slot below the table when the
+     operator's actually on the Final scene, with the gold .match-final card
+     frame (see .card.match-final) doing the rest of the work to make this
+     read as clearly different from the purple-framed Set Break/Timeout
+     cards at a glance. */
+  .vb-final-banner{margin-top:28px;text-align:center;}
+  .vb-final-banner.hide{display:none;}
+  .vb-final-winner{font-family:var(--display);font-weight:800;font-size:28px;letter-spacing:4px;
+    color:var(--gold);text-transform:uppercase;}
+  .vb-final-tally{font-family:var(--display);font-weight:800;font-size:64px;color:var(--white);
+    margin-top:2px;line-height:1;}
 
   #scene-break .card{width:1000px;padding:52px 60px 44px;}
   .label-sm{font-family:var(--display);font-weight:700;font-size:18px;letter-spacing:6px;
@@ -357,7 +384,7 @@
   </div>
 
   <div class="scene" id="scene-vb-recap">
-    <div class="card">
+    <div class="card" id="vbRecapCard">
       <div class="vb-recap-tag" id="vbRecapTag">SET BREAK</div>
       <div class="vb-recap-event" id="vbRecapEvent">Match Title</div>
       <div class="vb-recap-sub" id="vbRecapSub">Conference</div>
@@ -401,6 +428,14 @@
           <div><span class="vb-set-num" id="vbAwaySet4">–</span></div>
           <div><span class="vb-set-num" id="vbAwaySet5">–</span></div>
         </div>
+      </div>
+      <div class="vb-recap-timer-wrap" id="vbRecapTimerWrap">
+        <div class="back-in">Resumes in</div>
+        <div class="timer" id="vbRecapTimer">3:00</div>
+      </div>
+      <div class="vb-final-banner" id="vbFinalBanner">
+        <div class="vb-final-winner" id="vbFinalWinner">EAC WINS</div>
+        <div class="vb-final-tally" id="vbFinalTally">3–1</div>
       </div>
     </div>
   </div>
@@ -483,7 +518,6 @@
   const SCENES = ['scorebug','matchup','halftime','break','vb-recap','water','final'];
   const KICKOFF_LABELS = { soccer:'Kickoff', basketball:'Tip-off', volleyball:'First Serve', baseball:'First Pitch', softball:'First Pitch' };
   const HALFTIME_TITLES = { soccer:'Halftime', basketball:'Halftime', volleyball:'Set Break', baseball:'Inning Break', softball:'Inning Break' };
-  const SETS_TO_WIN = 3; // best-of-5 — first side to 3 sets takes the match
 
   function applyTeamColors(s){
     document.documentElement.style.setProperty('--home-color', s.homeColor);
@@ -497,11 +531,17 @@
   // production overlay (no query string) is unaffected.
   const FORCED_PREVIEW_SCENE = new URLSearchParams(location.search).get('preview');
 
-  // Volleyball has no separate scene button of its own — the operator's
-  // existing "Set Break" live-scene tap just resolves to this bigger box-
-  // score recap instead of the plain halftime card while sport=volleyball.
+  // Volleyball has no separate "Set Break"/"Timeout"/"Final" scenes of its
+  // own — all three live-scene taps resolve to this bigger box-score recap
+  // instead of the plain halftime/final cards while sport=volleyball, since
+  // all three are really the same "here's the set scores so far" view.
+  // renderVbRecap tells them apart (tag text, timer vs. final banner, purple
+  // vs. gold frame) purely from s.mode — never from the score — so Set
+  // Break/Timeout keep their own look even after a side reaches 3 sets;
+  // only an actual tap of "Final" shows the final treatment.
   function setMode(mode, sport){
-    const activeName = FORCED_PREVIEW_SCENE || ((mode === 'halftime' && sport === 'volleyball') ? 'vb-recap' : mode);
+    const vbRecapModes = mode === 'halftime' || mode === 'timeout' || mode === 'final';
+    const activeName = FORCED_PREVIEW_SCENE || ((vbRecapModes && sport === 'volleyball') ? 'vb-recap' : mode);
     SCENES.forEach(name => {
       document.getElementById('scene-' + name).classList.toggle('active', name === activeName);
     });
@@ -564,11 +604,29 @@
 
   function renderVbRecap(s){
     const scores = s.volleyballSetScores || {};
-    const matchOver = s.setsWon.home >= SETS_TO_WIN || s.setsWon.away >= SETS_TO_WIN;
+    // Which of the three looks this card takes is the operator's explicit
+    // scene choice (s.mode), not something inferred from the score — sets
+    // reaching 3 doesn't retire Set Break/Timeout on its own (the operator
+    // may still want either of those, e.g. correcting a score after the
+    // fact), so only an actual tap of "Final" should ever produce the
+    // gold-framed/box-score-final look. Basing this on the score instead
+    // made Set Break and Timeout collapse into "FINAL" the moment either
+    // side reached 3 sets, regardless of which button was tapped.
+    const isFinal = s.mode === 'final';
 
-    document.getElementById('vbRecapTag').textContent = matchOver ? 'FINAL' : 'SET BREAK';
+    document.getElementById('vbRecapTag').textContent =
+      isFinal ? 'FINAL' : (s.mode === 'timeout' ? 'TIMEOUT' : 'SET BREAK');
     document.getElementById('vbRecapEvent').textContent = s.event;
     document.getElementById('vbRecapSub').textContent = s.league;
+    document.getElementById('vbRecapTimerWrap').classList.toggle('hide', isFinal);
+    document.getElementById('vbFinalBanner').classList.toggle('hide', !isFinal);
+    document.getElementById('vbRecapCard').classList.toggle('match-final', isFinal);
+    if(isFinal){
+      const homeWon = s.setsWon.home > s.setsWon.away;
+      const winnerName = (homeWon ? s.home : s.away) || (homeWon ? 'HOME' : 'AWAY');
+      document.getElementById('vbFinalWinner').textContent = winnerName + ' WINS';
+      document.getElementById('vbFinalTally').textContent = s.setsWon.home + '–' + s.setsWon.away;
+    }
 
     setCrest(document.getElementById('vbHomeCrest'), s.homeLogo, s.home.slice(0,1), s.homeColor, s.homeLogoBg);
     setCrest(document.getElementById('vbAwayCrest'), s.awayLogo, s.away.slice(0,1), s.awayColor, s.awayLogoBg);
@@ -579,13 +637,13 @@
     document.getElementById('vbHomeOverall').textContent = s.setsWon.home;
     document.getElementById('vbAwayOverall').textContent = s.setsWon.away;
 
-    document.getElementById('vbHomeRow').classList.toggle('winner', matchOver && s.setsWon.home > s.setsWon.away);
-    document.getElementById('vbAwayRow').classList.toggle('winner', matchOver && s.setsWon.away > s.setsWon.home);
-    document.getElementById('vbHomeServe').classList.toggle('show', !matchOver && s.servingSide === 'home');
-    document.getElementById('vbAwayServe').classList.toggle('show', !matchOver && s.servingSide === 'away');
+    document.getElementById('vbHomeRow').classList.toggle('winner', isFinal && s.setsWon.home > s.setsWon.away);
+    document.getElementById('vbAwayRow').classList.toggle('winner', isFinal && s.setsWon.away > s.setsWon.home);
+    document.getElementById('vbHomeServe').classList.toggle('show', !isFinal && s.servingSide === 'home');
+    document.getElementById('vbAwayServe').classList.toggle('show', !isFinal && s.servingSide === 'away');
 
     for(let n = 1; n <= 5; n++){
-      const isCurrent = !matchOver && n === s.volleyballSet;
+      const isCurrent = !isFinal && n === s.volleyballSet;
       const entry = isCurrent ? { home: s.homeScore, away: s.awayScore } : scores[n];
       const homeCell = document.getElementById('vbHomeSet' + n);
       const awayCell = document.getElementById('vbAwaySet' + n);
@@ -729,11 +787,19 @@
       `translateX(-50%) translate(${layout.x}px, ${layout.y}px) scale(${layout.scale})`;
   }
 
+  // Drives both the plain halftime scene's #timer and the volleyball recap
+  // card's #vbRecapTimer from the same s.halftimeEndsAt — Set Break and
+  // Timeout are just two labels on the one shared countdown, so this always
+  // keeps them in sync with each other and with the "Between Sets"/"Timeout"
+  // preset that armed it.
   function renderTimer(s){
-    if(!s.halftimeEndsAt){ document.getElementById('timer').textContent = '0:00'; return; }
-    const remaining = Math.max(0, Math.round((s.halftimeEndsAt - Date.now()) / 1000));
-    const m = Math.floor(remaining/60), sec = remaining%60;
-    document.getElementById('timer').textContent = `${m}:${sec.toString().padStart(2,'0')}`;
+    const text = !s.halftimeEndsAt ? '0:00' : (() => {
+      const remaining = Math.max(0, Math.round((s.halftimeEndsAt - Date.now()) / 1000));
+      const m = Math.floor(remaining/60), sec = remaining%60;
+      return `${m}:${sec.toString().padStart(2,'0')}`;
+    })();
+    document.getElementById('timer').textContent = text;
+    document.getElementById('vbRecapTimer').textContent = text;
   }
 
   function flashGoal(side, delta){
