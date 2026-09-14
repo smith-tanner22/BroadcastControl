@@ -152,7 +152,12 @@
     20%{opacity:1;transform:translateX(-50%) translateY(-10px) scale(1);}
     75%{opacity:1;transform:translateX(-50%) translateY(-10px) scale(1);}
     100%{opacity:0;transform:translateX(-50%) translateY(-26px) scale(0.9);}}
-  .score-flash.pos-bottom{top:auto;bottom:-38px;}
+  /* --flash-bottom-extra is set in JS to the period-strip's live height
+     (soccer/basketball's flush layout only) so the "GOAL"/"+N" pop-up clears
+     that strip instead of covering the 1ST/2ND HALF (or quarter) text —
+     see render(). It stays 0 for volleyball/baseball/softball, which have
+     no period-strip, so their flash position is unchanged. */
+  .score-flash.pos-bottom{top:auto;bottom:calc(-38px - var(--flash-bottom-extra, 0px));}
   .score-flash.pos-bottom.show{animation:drop 1.6s ease forwards;}
   @keyframes drop{0%{opacity:0;transform:translateX(-50%) translateY(-10px) scale(0.6);}
     20%{opacity:1;transform:translateX(-50%) translateY(10px) scale(1);}
@@ -684,8 +689,16 @@
     document.querySelector('.team.home').classList.toggle('flush-inner', flushMode);
     document.querySelector('.team.away').classList.toggle('flush-inner', flushMode);
     document.getElementById('bugDivider').classList.toggle('show', flushMode);
-    document.getElementById('periodStrip').classList.toggle('show', flushMode);
+    const periodStripEl = document.getElementById('periodStrip');
+    periodStripEl.classList.toggle('show', flushMode);
     document.getElementById('periodStripText').textContent = periodLabel(s);
+
+    // Keep the bottom-position goal/score flash clear of the period strip
+    // it now sits above (flush mode only) — measured live off the strip's
+    // real rendered height rather than a hardcoded guess, so it stays
+    // correct if the strip's padding/font/text ever changes.
+    document.querySelector('.stage').style.setProperty('--flash-bottom-extra',
+      flushMode ? (periodStripEl.offsetHeight + 10) + 'px' : '0px');
 
     // Sport-specific sub-stats on the scorebug
     const homeSub = document.getElementById('homeSubStat');
