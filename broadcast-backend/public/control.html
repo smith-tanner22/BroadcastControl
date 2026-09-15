@@ -686,6 +686,21 @@
   </div>
 </section>
 
+<section class="pri-commentator-bug">
+  <div class="section-label">On-Air Bugs</div>
+  <button class="apply-btn" id="showCommentatorBugBtn" style="margin-top:0;">Show Lee Patterson On Air</button>
+  <button class="apply-btn" id="showGuestBugBtn" style="margin-top:10px;">Show Guest On Air</button>
+</section>
+
+<details class="pri-guest-setup">
+  <summary>Guest Info</summary>
+  <div class="details-body">
+    <div class="field"><label>Guest Name</label><input type="text" id="guestName" placeholder="Paul Demuth"></div>
+    <div class="field"><label>Guest Title</label><input type="text" id="guestTitle" placeholder="Athletic Director"></div>
+    <button class="apply-btn" id="saveGuest">Save Guest Info</button>
+  </div>
+</details>
+
 <div class="dash-col" id="dashColA"></div>
 <div class="dash-col" id="dashColB"></div>
 
@@ -696,8 +711,8 @@
     <div class="modal-title">Full Reset?</div>
     <div class="modal-body">
       This clears the score and all <strong id="fullResetSportName">Soccer</strong> game state
-      (half/quarter, fouls, timeouts, sets, count, runners — whatever applies). Team names, colors, and
-      logos are kept.
+      (half/quarter, fouls, timeouts, sets, count, runners — whatever applies), and resets the away
+      team's name, logo, and color back to default. Home team info is kept.
     </div>
     <div class="modal-actions">
       <button class="modal-btn cancel" id="fullResetCancelBtn">Cancel</button>
@@ -899,6 +914,12 @@
     if(document.activeElement.id !== 'sponsorTag') document.getElementById('sponsorTag').value = s.sponsorTag;
     if(document.activeElement.id !== 'footer') document.getElementById('footer').value = s.footer;
     if(document.activeElement.id !== 'qr') document.getElementById('qr').value = s.qr;
+
+    if(document.activeElement.id !== 'guestName') document.getElementById('guestName').value = s.guestName || '';
+    if(document.activeElement.id !== 'guestTitle') document.getElementById('guestTitle').value = s.guestTitle || '';
+    // Don't let the guest bug go on air blank before anything's been saved —
+    // but don't fight the on-air cooldown countdown while one is running.
+    if(!guestBugCooldownActive) document.getElementById('showGuestBugBtn').disabled = !s.guestName;
   }
 
   document.querySelectorAll('.sport-tab').forEach(btn => {
@@ -1254,6 +1275,9 @@
   const markBreakSaved = makeSaveFeedback(document.getElementById('saveBreak'), [
     'breakMode', 'breakTitle', 'sponsor', 'sponsorTag', 'footer', 'qr'
   ]);
+  const markGuestSaved = makeSaveFeedback(document.getElementById('saveGuest'), [
+    'guestName', 'guestTitle'
+  ]);
 
   document.getElementById('saveTeams').addEventListener('click', () => {
     send({
@@ -1292,6 +1316,57 @@
       }
     });
     markBreakSaved();
+  });
+
+  document.getElementById('saveGuest').addEventListener('click', () => {
+    send({
+      type: 'UPDATE_GUEST',
+      data: {
+        guestName: document.getElementById('guestName').value,
+        guestTitle: document.getElementById('guestTitle').value
+      }
+    });
+    markGuestSaved();
+  });
+
+  // One-shot triggers for the commentator/guest on-air bugs. Matches the
+  // overlay's own 10s on-air duration (see overlay.html's bugInLeft/
+  // bugInRight animations) — the button greys out and counts down so the
+  // operator can't re-fire (and restart the bug's animation) while it's
+  // still on screen. Date.now()-based remaining time, same technique as
+  // renderTimer/renderTimerLive, so it can't drift.
+  const BUG_ON_AIR_MS = 10000;
+  let guestBugCooldownActive = false;
+
+  function startTriggerCooldown(btn, onDone){
+    const defaultLabel = btn.textContent;
+    const endsAt = Date.now() + BUG_ON_AIR_MS;
+    btn.disabled = true;
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
+      if(remaining <= 0){
+        clearInterval(interval);
+        btn.textContent = defaultLabel;
+        if(onDone) onDone(btn); else btn.disabled = false;
+      } else {
+        btn.textContent = `On Air — ${remaining}s`;
+      }
+    };
+    const interval = setInterval(tick, 250);
+    tick();
+  }
+
+  document.getElementById('showCommentatorBugBtn').addEventListener('click', (e) => {
+    send({ type: 'SHOW_COMMENTATOR_BUG' });
+    startTriggerCooldown(e.currentTarget);
+  });
+  document.getElementById('showGuestBugBtn').addEventListener('click', (e) => {
+    send({ type: 'SHOW_GUEST_BUG' });
+    guestBugCooldownActive = true;
+    startTriggerCooldown(e.currentTarget, (btn) => {
+      guestBugCooldownActive = false;
+      btn.disabled = !latestState || !latestState.guestName;
+    });
   });
 
   // ---------------- Scorebug layout editor ----------------
@@ -1488,7 +1563,8 @@
   // own sport section (set/sets-won/serving, or inning/count/runners) takes
   // that slot instead — otherwise column 1 would sit mostly empty for those
   // sports while column 2 carried everything.
-  const dashColASelectors = ['.pri-score', '.pri-primary-stats', '.pri-col1-sport', '.pri-reset'];
+  const dashColASelectors = ['.pri-score', '.pri-primary-stats', '.pri-col1-sport', '.pri-reset',
+    '.pri-commentator-bug', '.pri-guest-setup'];
   const dashColBSelectors = ['.pri-secondary-stats', '.pri-scene', '.pri-layout-setup', '.pri-break',
     '.pri-flash-position', '.pri-team-setup', '.pri-break-setup'];
 

@@ -78,6 +78,12 @@ const DEFAULT_STATE = {
   footer: 'LIVE COVERAGE',
   qr: '',
 
+  // Guest bug — persisted so the operator types it once and can re-trigger
+  // the on-air pulse repeatedly without retyping. The commentator bug is
+  // hardcoded client-side and needs no state.
+  guestName: '',
+  guestTitle: '',
+
   // Halftime/intermission countdown, same fixed-end-time trick as the clock.
   halftimeEndsAt: null, // epoch ms
   // Which timer preset is currently armed (e.g. 180 for volleyball's 3:00
@@ -223,6 +229,17 @@ function applyAction(action) {
 
       state.homeScore = 0;
       state.awayScore = 0;
+
+      // Back-to-back games usually mean a new opponent — reset the away
+      // side's identity to the blank defaults so the previous opponent's
+      // name/logo/color doesn't carry over. Home (always EAC) is left
+      // alone: it's the broadcast's own fixed identity, not opponent-
+      // dependent, so there's nothing to reset there.
+      state.away = 'AWAY';
+      state.awayFullName = '';
+      state.awayColor = '#B3232E';
+      state.awayLogo = '';
+      state.awayLogoBg = '#FFFFFF';
 
       if (sport === 'soccer') {
         state.half = '1st Half';
@@ -408,6 +425,21 @@ function applyAction(action) {
     case 'UPDATE_BREAK':
       Object.assign(state, action.data);
       break;
+
+    case 'UPDATE_GUEST':
+      Object.assign(state, action.data);
+      break;
+
+    // ---------------- Commentator / Guest bugs ----------------
+    // Pure one-shot triggers — no state to mutate, so return early instead
+    // of falling through to the trailing broadcastState()/save below.
+    case 'SHOW_COMMENTATOR_BUG':
+      broadcastEvent({ type: 'COMMENTATOR_BUG' });
+      return;
+
+    case 'SHOW_GUEST_BUG':
+      broadcastEvent({ type: 'GUEST_BUG' });
+      return;
 
     default:
       console.warn('Unknown action', action);

@@ -293,6 +293,45 @@
   .footer{margin-top:26px;font-family:var(--body);font-weight:600;font-size:14px;letter-spacing:2px;
     color:rgba(255,255,255,0.5);text-transform:uppercase;}
 
+  /* ---------- COMMENTATOR / GUEST BUGS ----------
+     Bottom-corner "now on air" bugs, siblings of .scene (not inside any one
+     scene) so they show over whichever scene is live. Same one-timeline-
+     does-everything technique as .score-flash's rise/drop (10s instead of
+     1.6s): fade+slide in, hold, fade out, all encoded in one @keyframes run,
+     restarted via the remove-class/reflow/add-class trick (see flashBug()).
+     render() only ever writes text into these — it must never touch .show,
+     so a STATE broadcast (constant) can't interrupt/reset a running bug. */
+  .corner-bug{position:absolute;bottom:48px;display:flex;flex-direction:column;
+    background:var(--panel-alpha);border:3px solid var(--home-color);
+    padding:12px 22px;filter:drop-shadow(0 12px 30px rgba(0,0,0,0.45));
+    opacity:0;pointer-events:none;z-index:5;max-width:360px;}
+  #commentatorBug{left:48px;clip-path:polygon(0 0,100% 0,100% 100%,12px 100%,0 calc(100% - 12px));}
+  #guestBug{right:48px;border-color:var(--gold);
+    clip-path:polygon(0 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%);}
+  .bug-eyebrow{font-family:var(--display);font-weight:700;font-size:13px;letter-spacing:4px;
+    color:var(--gold);text-transform:uppercase;margin-bottom:4px;}
+  .bug-name{font-family:var(--display);font-weight:800;font-size:26px;color:var(--white);
+    text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;}
+  .bug-sub{display:flex;align-items:center;gap:8px;font-family:var(--body);font-weight:600;
+    font-size:13px;color:rgba(255,255,255,0.65);letter-spacing:0.3px;margin-top:4px;white-space:nowrap;}
+  .bug-sub:empty{display:none;}
+  .bug-sub svg{width:14px;height:14px;flex-shrink:0;fill:rgba(255,255,255,0.65);}
+
+  #commentatorBug.show{animation:bugInLeft 10s ease forwards;}
+  @keyframes bugInLeft{
+    0%{opacity:0;transform:translateX(-40px);}
+    4%{opacity:1;transform:translateX(0);}
+    92%{opacity:1;transform:translateX(0);}
+    100%{opacity:0;transform:translateX(-40px);}
+  }
+  #guestBug.show{animation:bugInRight 10s ease forwards;}
+  @keyframes bugInRight{
+    0%{opacity:0;transform:translateX(40px);}
+    4%{opacity:1;transform:translateX(0);}
+    92%{opacity:1;transform:translateX(0);}
+    100%{opacity:0;transform:translateX(40px);}
+  }
+
 </style>
 </head>
 <body>
@@ -503,6 +542,19 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <div class="corner-bug" id="commentatorBug">
+    <div class="bug-eyebrow">On The Mic</div>
+    <div class="bug-name">Lee Patterson</div>
+    <div class="bug-sub"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.9 2H22l-7.6 8.7L23.3 22h-7.1l-5.5-7.2L4.3 22H1.2l8.1-9.3L1 2h7.3l5 6.6L18.9 2zm-1.2 18h1.9L7.4 4H5.4l12.3 16z"/></svg>@radioguyaz99</div>
+    <div class="bug-sub"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 12.06C22 6.51 17.52 2 12 2S2 6.51 2 12.06C2 17.06 5.66 21.2 10.44 22v-7.03H7.9v-2.91h2.54V9.85c0-2.5 1.49-3.89 3.77-3.89 1.09 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56v1.88h2.78l-.44 2.91h-2.34V22C18.34 21.2 22 17.06 22 12.06z"/></svg>Overtime with Lee Patterson</div>
+  </div>
+
+  <div class="corner-bug" id="guestBug">
+    <div class="bug-eyebrow">Joining Us</div>
+    <div class="bug-name" id="guestBugName">Guest Name</div>
+    <div class="bug-sub" id="guestBugTitle">Guest Title</div>
   </div>
 
 <script>
@@ -790,6 +842,9 @@
       document.getElementById('qrPlaceholder').style.display = 'flex';
     }
 
+    document.getElementById('guestBugName').textContent = s.guestName || '';
+    document.getElementById('guestBugTitle').textContent = s.guestTitle || '';
+
     renderTimer(s);
     renderVbRecap(s);
     applyScorebugLayout(s.scorebugLayout || { x: 0, y: 0, scale: 1 });
@@ -824,6 +879,11 @@
     g.classList.remove('show'); void g.offsetWidth; g.classList.add('show');
   }
 
+  function flashBug(id){
+    const el = document.getElementById(id);
+    el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+  }
+
   let latestState = null;
   setInterval(() => { if(latestState){ renderTimer(latestState); } }, 250);
 
@@ -839,6 +899,8 @@
       const data = JSON.parse(msg.data);
       if(data.type === 'STATE'){ latestState = data.state; render(data.state); }
       if(data.type === 'EVENT' && data.event.type === 'SCORE'){ flashGoal(data.event.side, data.event.delta); }
+      if(data.type === 'EVENT' && data.event.type === 'COMMENTATOR_BUG'){ flashBug('commentatorBug'); }
+      if(data.type === 'EVENT' && data.event.type === 'GUEST_BUG'){ flashBug('guestBug'); }
     };
   }
   connect();
