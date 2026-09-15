@@ -732,11 +732,21 @@
   // fallback for the "Start" button when no preset has been armed yet.
   const DEFAULT_INTERMISSION_SECONDS = { soccer:900, basketball:900, volleyball:180, baseball:900, softball:900 };
 
+  // Actions clicked before the socket finishes connecting (e.g. right after
+  // page load, or during a brief reconnect) used to be silently dropped —
+  // send() would just no-op, while the button's own click handler still
+  // showed "Saved ✓"/fired its confirmation regardless. Queueing them here
+  // and flushing on open means a fast click right after load can't vanish.
+  let pendingActions = [];
   function connect(){
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
     ws = new WebSocket(`${proto}//${location.host}`);
     const conn = document.getElementById('conn');
-    ws.onopen = () => { conn.textContent = 'live'; conn.className = 'live'; };
+    ws.onopen = () => {
+      conn.textContent = 'live'; conn.className = 'live';
+      pendingActions.forEach(a => ws.send(JSON.stringify(a)));
+      pendingActions = [];
+    };
     ws.onclose = () => { conn.textContent = 'reconnecting…'; conn.className = 'down'; setTimeout(connect, 1500); };
     ws.onerror = () => ws.close();
     ws.onmessage = (msg) => {
@@ -744,7 +754,10 @@
       if(data.type === 'STATE'){ latestState = data.state; render(data.state); }
     };
   }
-  function send(action){ if(ws && ws.readyState === 1) ws.send(JSON.stringify(action)); }
+  function send(action){
+    if(ws && ws.readyState === 1) ws.send(JSON.stringify(action));
+    else pendingActions.push(action);
+  }
 
   function fmtClock(totalSeconds){
     const s = Math.max(0, Math.round(totalSeconds));
