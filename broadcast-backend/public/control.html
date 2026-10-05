@@ -87,6 +87,11 @@
     transition:background .15s ease, border-color .15s ease;}
   .mode-btn.off{grid-column:span 3;}
   .mode-btn.active{background:var(--gold);color:#1a1400;border-color:var(--gold);}
+  @media (min-width:720px){
+    .mode-grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;}
+    .mode-btn{height:42px;font-size:11px;letter-spacing:0.4px;border-radius:8px;padding:0 4px;}
+    .mode-btn.off{grid-column:span 1;}
+  }
 
   .score-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;
     padding:16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
@@ -226,6 +231,10 @@
   .vb-box-input{width:100%;height:36px;text-align:center;background:var(--panel-2);border:1px solid var(--line);
     border-radius:6px;color:var(--white);font-family:var(--display);font-weight:700;font-size:15px;padding:0;}
   .vb-next-set-btn{background:var(--green);color:#08210f;}
+  .vb-end-match-wrap{display:none;margin-top:10px;}
+  .vb-end-match-wrap.show{display:block;}
+  .vb-end-match-btn{background:var(--red);color:#2a0808;border:1px solid var(--red);}
+  .vb-end-match-note{font-size:12px;line-height:1.35;color:rgba(255,255,255,0.58);margin-top:6px;}
 
   .serve-row{display:flex;gap:8px;margin-bottom:10px;}
   .serve-btn{flex:1;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--panel);
@@ -260,10 +269,12 @@
     border-radius:10px;overflow:hidden;border:1px solid var(--line);}
   .layout-preview-frame{position:absolute;top:0;left:0;width:1920px;height:1080px;
     border:0;pointer-events:none;transform-origin:top left;}
-  .layout-proxy{position:absolute;border:2px dashed var(--gold);box-sizing:border-box;
-    background:rgba(212,175,55,0.10);cursor:move;touch-action:none;}
-  .layout-proxy-handle{position:absolute;right:-10px;bottom:-10px;width:20px;height:20px;
-    border-radius:50%;background:var(--gold);border:2px solid #1a1400;cursor:nwse-resize;touch-action:none;}
+	  .layout-proxy{position:absolute;border:2px dashed var(--gold);box-sizing:border-box;
+	    background:rgba(212,175,55,0.10);cursor:move;touch-action:none;}
+	  .challenge-layout-proxy{position:absolute;border:2px dashed #C9A7FF;box-sizing:border-box;
+	    background:rgba(201,167,255,0.12);cursor:move;touch-action:none;}
+	  .layout-proxy-handle{position:absolute;right:-10px;bottom:-10px;width:20px;height:20px;
+	    border-radius:50%;background:var(--gold);border:2px solid #1a1400;cursor:nwse-resize;touch-action:none;}
   .layout-readout{text-align:center;font-family:var(--display);font-weight:700;font-size:14px;
     color:var(--dim);letter-spacing:1px;margin:10px 0 0;}
   /* Transient confirmation after Save Position / Save as Default — the
@@ -274,6 +285,11 @@
     letter-spacing:1px;text-transform:uppercase;color:var(--green);margin-top:10px;
     opacity:0;transition:opacity .3s ease;}
   .layout-save-confirm.show{opacity:1;}
+  .flash-position-editor{border-top:1px solid var(--line);padding-top:14px;margin-top:4px;}
+  .flash-style-editor{border-top:1px solid var(--line);padding-top:14px;margin-top:4px;}
+  .flash-style-team{display:flex;align-items:center;gap:8px;font-family:var(--display);
+    font-weight:700;font-size:14px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);
+    margin:4px 0 8px;}
 
   /* Instagram-style center snap guides — shown only while the drag is
      actively snapped to dead-center on that axis. */
@@ -289,23 +305,25 @@
   .custom-timer-row input{flex:1;}
   .custom-timer-row button{flex:1;}
 
-  /* ---- Live Start/Stop for the intermission/between-sets/timeout timer ----
-     The countdown used to only start as a side effect of tapping the scene
-     button, with the running value visible nowhere but mirrored quietly
-     into the custom-duration input — easy to miss. This gives it its own
-     unmistakable readout plus explicit controls, independent of whichever
-     scene happens to be live. */
+  /* ---- Live readout for the intermission/between-sets/timeout timer ----
+     Scene buttons start the standard timers; custom controls below handle
+     one-off durations and stopping the countdown. */
   .timer-live-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;
     padding:10px 12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;}
   .timer-live-readout{font-family:var(--display);font-weight:800;font-size:28px;
     min-width:76px;color:var(--dim);letter-spacing:0.5px;}
   .timer-live-readout.running{color:var(--gold);}
-  .timer-start-btn,.timer-stop-btn{flex:1;height:44px;border-radius:9px;
+  .timer-stop-btn{flex:1;height:44px;border-radius:9px;
     font-family:var(--display);font-weight:700;font-size:14px;letter-spacing:1px;text-transform:uppercase;}
-  .timer-start-btn{background:var(--gold);color:#1a1400;border:1px solid var(--gold);}
-  .timer-start-btn:disabled{background:var(--panel-2);color:var(--dim);border-color:var(--line);opacity:0.7;}
   .timer-stop-btn{background:transparent;color:var(--red);border:1px solid var(--red);}
   .timer-stop-btn:disabled{color:var(--dim);border-color:var(--line);opacity:0.7;}
+
+  .challenge-result-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;}
+  .challenge-result-btn{height:46px;border-radius:10px;border:1px solid var(--line);
+    font-family:var(--display);font-weight:800;font-size:13px;letter-spacing:0.5px;text-transform:uppercase;}
+  .challenge-result-btn.success{background:var(--green);border-color:var(--green);color:#08210f;}
+  .challenge-result-btn.failed{background:var(--red);border-color:var(--red);color:#2a0808;}
+  .challenge-result-btn:disabled{background:var(--panel-2);border-color:var(--line);color:var(--dim);}
 
   [data-sport-section]{display:none;}
 </style>
@@ -335,7 +353,6 @@
     <button class="mode-btn" data-mode="matchup">Matchup</button>
     <button class="mode-btn" data-mode="halftime" id="halftimeModeBtn">Halftime</button>
     <button class="mode-btn" data-mode="timeout" data-sport-section="volleyball" data-show-display="flex">Timeout</button>
-    <button class="mode-btn" data-mode="break">Break</button>
     <button class="mode-btn" data-mode="final">Final</button>
     <button class="mode-btn" data-mode="water" data-sport-section="soccer" data-show-display="flex">Water Break</button>
     <button class="mode-btn off" data-mode="off">Off</button>
@@ -349,20 +366,71 @@
       <iframe id="layoutPreviewFrame" class="layout-preview-frame" src="/overlay.html?preview=scorebug"></iframe>
       <div class="layout-guide-v" id="layoutGuideV"></div>
       <div class="layout-guide-h" id="layoutGuideH"></div>
-      <div class="layout-proxy" id="layoutProxy">
-        <div class="layout-proxy-handle" id="layoutProxyHandle" title="Drag to resize"></div>
+	      <div class="layout-proxy" id="layoutProxy">
+	        <div class="layout-proxy-handle" id="layoutProxyHandle" title="Drag to resize"></div>
+	      </div>
+	      <div class="challenge-layout-proxy" id="challengeLayoutProxy" title="Drag to move challenge bug"></div>
+	    </div>
+	    <div class="layout-readout" id="layoutReadout">x:0 y:0 scale:1.00</div>
+	    <div class="layout-readout" id="challengeLayoutReadout">challenge x:0 y:0</div>
+	    <div class="row2">
+	      <button class="apply-btn" id="layoutSaveBtn" style="margin-top:0;">Save Position</button>
+	      <button class="reset-btn" id="layoutCancelBtn" style="margin-top:0;">Cancel</button>
+    </div>
+	    <div class="row2">
+	      <button class="apply-btn" id="layoutSaveForSportBtn" style="margin-top:10px;">Save Both as Default for <span id="sportLabelBtn">Soccer</span></button>
+	      <button class="reset-btn" id="layoutResetForSportBtn" style="margin-top:10px;">Reset <span id="sportResetLabel">Soccer</span> Layouts to Default</button>
+	    </div>
+	    <div class="row2">
+	      <button class="apply-btn" id="challengeLayoutSaveBtn" style="margin-top:10px;">Save Challenge Position</button>
+	      <button class="reset-btn" id="challengeLayoutResetBtn" style="margin-top:10px;">Reset Challenge Position</button>
+	    </div>
+    <div class="layout-save-confirm" id="layoutSaveConfirm"></div>
+    <div class="flash-position-editor">
+      <div class="section-label">Score Flash Position</div>
+      <div class="clock-visibility-row">
+        <button class="clock-btn vis" id="flashTopBtn" data-position="top">Flash: Top</button>
+        <button class="clock-btn vis" id="flashBottomBtn" data-position="bottom">Flash: Bottom</button>
       </div>
     </div>
-    <div class="layout-readout" id="layoutReadout">x:0 y:0 scale:1.00</div>
-    <div class="row2">
-      <button class="apply-btn" id="layoutSaveBtn" style="margin-top:0;">Save Position</button>
-      <button class="reset-btn" id="layoutCancelBtn" style="margin-top:0;">Cancel</button>
+    <div class="flash-style-editor">
+      <div class="section-label">Score Flash Style</div>
+      <div class="flash-style-team"><span class="swatch" id="homeFlashStyleSwatch"></span><span id="homeFlashStyleLabel">HOME</span></div>
+      <div class="row2">
+        <div class="field"><label>Home Fill</label>
+          <div class="color-row">
+            <div class="color-preview" id="homeScoreFlashColorPreview"></div>
+            <input type="text" id="homeScoreFlashColor" placeholder="#D4AF37" maxlength="7">
+          </div>
+          <div class="palette-row" id="homeScoreFlashColorPalette"></div>
+        </div>
+        <div class="field"><label>Home Outline</label>
+          <div class="color-row">
+            <div class="color-preview" id="homeScoreFlashOutlinePreview"></div>
+            <input type="text" id="homeScoreFlashOutline" placeholder="#000000" maxlength="7">
+          </div>
+          <div class="palette-row" id="homeScoreFlashOutlinePalette"></div>
+        </div>
+      </div>
+      <div class="flash-style-team"><span class="swatch" id="awayFlashStyleSwatch"></span><span id="awayFlashStyleLabel">AWAY</span></div>
+      <div class="row2">
+        <div class="field"><label>Away Fill</label>
+          <div class="color-row">
+            <div class="color-preview" id="awayScoreFlashColorPreview"></div>
+            <input type="text" id="awayScoreFlashColor" placeholder="#D4AF37" maxlength="7">
+          </div>
+          <div class="palette-row" id="awayScoreFlashColorPalette"></div>
+        </div>
+        <div class="field"><label>Away Outline</label>
+          <div class="color-row">
+            <div class="color-preview" id="awayScoreFlashOutlinePreview"></div>
+            <input type="text" id="awayScoreFlashOutline" placeholder="#000000" maxlength="7">
+          </div>
+          <div class="palette-row" id="awayScoreFlashOutlinePalette"></div>
+        </div>
+      </div>
+      <button class="apply-btn" id="saveScoreFlashStyle">Save Flash Style</button>
     </div>
-    <div class="row2">
-      <button class="apply-btn" id="layoutSaveForSportBtn" style="margin-top:10px;">Save as Default for <span id="sportLabelBtn">Soccer</span></button>
-      <button class="reset-btn" id="layoutResetForSportBtn" style="margin-top:10px;">Reset <span id="sportResetLabel">Soccer</span> to Default</button>
-    </div>
-    <div class="layout-save-confirm" id="layoutSaveConfirm"></div>
   </div>
 </details>
 
@@ -478,6 +546,10 @@
     <button class="preset-btn" data-set="5">5</button>
   </div>
   <button class="apply-btn vb-next-set-btn" id="vbNextSetBtn">Next Set →</button>
+  <div class="vb-end-match-wrap" id="vbEndMatchWrap">
+    <button class="apply-btn vb-end-match-btn" id="vbEndMatchBtn">Final: End Match</button>
+    <div class="vb-end-match-note" id="vbEndMatchNote">Records the final set score and completes the match.</div>
+  </div>
   <div class="section-label" style="margin-top:16px;">Sets Won</div>
   <div class="pair-grid">
     <div class="stat-card">
@@ -567,21 +639,11 @@
   <div class="section-label" id="intermissionLabel">Intermission Timer</div>
   <div class="timer-live-row">
     <div class="timer-live-readout" id="timerLiveReadout">0:00</div>
-    <button class="timer-start-btn" id="timerStartBtn">▶ Start</button>
-    <button class="timer-stop-btn" id="timerStopBtn">■ Stop</button>
-  </div>
-  <div class="preset-row" data-sport-preset="soccer basketball baseball softball">
-    <button class="preset-btn" data-seconds="900">15:00</button>
-    <button class="preset-btn" data-seconds="600">10:00</button>
-    <button class="preset-btn" data-seconds="300">5:00</button>
-  </div>
-  <div class="preset-row stacked-labels" data-sport-preset="volleyball">
-    <button class="preset-btn" data-seconds="180">3:00<span class="sub">Between Sets</span></button>
-    <button class="preset-btn" data-seconds="75">1:15<span class="sub">Timeout</span></button>
   </div>
   <div class="custom-timer-row">
     <input type="text" id="customTimerInput" placeholder="mm:ss">
     <button class="apply-btn" id="customTimerBtn" style="margin-top:0;">Start Custom</button>
+    <button class="timer-stop-btn" id="timerStopBtn">■ Stop</button>
   </div>
 </section>
 
@@ -658,43 +720,19 @@
   </div>
 </details>
 
-<details class="pri-break-setup">
-  <summary>Break / Sponsor</summary>
+<details class="pri-on-air-bugs">
+  <summary>On-Air Bugs</summary>
   <div class="details-body">
-    <div class="field">
-      <label>Break Type</label>
-      <select id="breakMode">
-        <option value="brb">Be Right Back</option>
-        <option value="timeout">Timeout</option>
-        <option value="sponsor">Sponsor</option>
-      </select>
+    <button class="apply-btn" id="showCommentatorBugBtn" style="margin-top:0;">Show Lee Patterson On Air</button>
+    <button class="apply-btn" id="showGuestBugBtn" style="margin-top:10px;">Show Guest On Air</button>
+    <div class="challenge-controls" data-sport-section="basketball volleyball" data-show-display="block">
+      <button class="apply-btn" id="showChallengeProgressBtn" style="margin-top:10px;">Challenge In Progress</button>
+      <div class="challenge-result-row">
+        <button class="challenge-result-btn success" id="showChallengeSuccessBtn">Challenge Successful</button>
+        <button class="challenge-result-btn failed" id="showChallengeFailedBtn">Challenge Failed</button>
+      </div>
     </div>
-    <div class="field"><label>Title</label><input type="text" id="breakTitle"></div>
-    <div class="field"><label>Sponsor Name</label><input type="text" id="sponsor"></div>
-    <div class="field"><label>Sponsor Tagline</label><input type="text" id="sponsorTag"></div>
-    <div class="field"><label>Footer Text</label><input type="text" id="footer"></div>
-    <div class="field"><label>QR Code Image URL</label><input type="url" id="qr" placeholder="https://..."></div>
-    <button class="apply-btn" id="saveBreak">Save Break Info</button>
-  </div>
-</details>
-
-<section class="pri-flash-position">
-  <div class="section-label">Score Flash Position</div>
-  <div class="clock-visibility-row">
-    <button class="clock-btn vis" id="flashTopBtn" data-position="top">Flash: Top</button>
-    <button class="clock-btn vis" id="flashBottomBtn" data-position="bottom">Flash: Bottom</button>
-  </div>
-</section>
-
-<section class="pri-commentator-bug">
-  <div class="section-label">On-Air Bugs</div>
-  <button class="apply-btn" id="showCommentatorBugBtn" style="margin-top:0;">Show Lee Patterson On Air</button>
-  <button class="apply-btn" id="showGuestBugBtn" style="margin-top:10px;">Show Guest On Air</button>
-</section>
-
-<details class="pri-guest-setup">
-  <summary>Guest Info</summary>
-  <div class="details-body">
+    <div class="section-label" style="margin-top:10px;">Guest Info</div>
     <div class="field"><label>Guest Name</label><input type="text" id="guestName" placeholder="Paul Demuth"></div>
     <div class="field"><label>Guest Title</label><input type="text" id="guestTitle" placeholder="Athletic Director"></div>
     <button class="apply-btn" id="saveGuest">Save Guest Info</button>
@@ -728,9 +766,8 @@
   const KICKOFF_LABELS = { soccer:'Kickoff Time', basketball:'Tip-off Time', volleyball:'First Serve Time', baseball:'First Pitch Time', softball:'First Pitch Time' };
   const INTERMISSION_LABELS = { soccer:'Halftime Timer', basketball:'Halftime Timer', volleyball:'Between-Sets / Timeout Timer', baseball:'Inning-Break Timer', softball:'Inning-Break Timer' };
   const HALFTIME_BTN_LABELS = { soccer:'Halftime', basketball:'Halftime', volleyball:'Set Break', baseball:'Inning Break', softball:'Inning Break' };
-  // Mirrors server.js's DEFAULT_INTERMISSION_SECONDS — only used as a
-  // fallback for the "Start" button when no preset has been armed yet.
-  const DEFAULT_INTERMISSION_SECONDS = { soccer:900, basketball:900, volleyball:180, baseball:900, softball:900 };
+  const DEFAULT_SCORE_FLASH_COLOR = '#D4AF37';
+  const DEFAULT_SCORE_FLASH_OUTLINE = '#000000';
 
   // Actions clicked before the socket finishes connecting (e.g. right after
   // page load, or during a brief reconnect) used to be silently dropped —
@@ -779,16 +816,7 @@
     return isNaN(n) ? null : n*60;
   }
 
-  // A preset (3:00, 15:00, etc.) is just an arming choice, same as the
-  // Half/Quarter/Set rows — it stays highlighted once picked regardless of
-  // scene switches, so "Set Break" always knows which duration to (re)start
-  // at. It's independent of whether a countdown happens to be running.
-  function renderIntermissionPresets(s){
-    document.querySelectorAll('[data-seconds]').forEach(b => {
-      b.classList.toggle('active', parseInt(b.dataset.seconds, 10) === s.intermissionSelectedSeconds);
-    });
-  }
-  // Mirror the live break countdown into the custom-timer field — lets the
+  // Mirror the live intermission countdown into the custom-timer field — lets the
   // operator see the running time and just click in to nudge it by a few
   // seconds instead of retyping it whole.
   function renderCustomTimerInput(s){
@@ -797,16 +825,14 @@
     document.getElementById('customTimerInput').value = fmtClock(remaining);
   }
   // The obvious, hard-to-miss version of the same countdown — a dedicated
-  // readout plus Start/Stop buttons that grey out to reflect whether the
-  // timer is actually running, independent of the custom-duration field
-  // above and of whichever scene is currently on air.
+  // readout plus a Stop button that reflects whether the timer is actually
+  // running. Volleyball scene buttons start their fixed timers directly.
   function renderTimerLive(s){
     const running = !!s.halftimeEndsAt && s.halftimeEndsAt > Date.now();
     const remaining = s.halftimeEndsAt ? Math.max(0, (s.halftimeEndsAt - Date.now()) / 1000) : 0;
     const readout = document.getElementById('timerLiveReadout');
     readout.textContent = fmtClock(remaining);
     readout.classList.toggle('running', running);
-    document.getElementById('timerStartBtn').disabled = running;
     document.getElementById('timerStopBtn').disabled = !running;
   }
   setInterval(() => {
@@ -814,12 +840,6 @@
     renderCustomTimerInput(latestState);
     renderTimerLive(latestState);
   }, 250);
-  document.getElementById('timerStartBtn').addEventListener('click', () => {
-    const sport = latestState ? latestState.sport : 'soccer';
-    const seconds = (latestState && latestState.intermissionSelectedSeconds)
-      || DEFAULT_INTERMISSION_SECONDS[sport] || 900;
-    send({ type: 'START_HALFTIME_TIMER', seconds });
-  });
   document.getElementById('timerStopBtn').addEventListener('click', () => {
     send({ type: 'STOP_HALFTIME_TIMER' });
   });
@@ -835,7 +855,73 @@
     });
   }
 
+  function volleyballSetTarget(setNum){
+    return setNum >= 5 ? 15 : 25;
+  }
+
+  function volleyballCurrentSetWinner(homeScore, awayScore, setNum){
+    const target = volleyballSetTarget(setNum);
+    if(homeScore >= target && homeScore - awayScore >= 2) return 'home';
+    if(awayScore >= target && awayScore - homeScore >= 2) return 'away';
+    return null;
+  }
+
+  function volleyballSetPointSideForScores(homeScore, awayScore, setNum){
+    if(volleyballCurrentSetWinner(homeScore, awayScore, setNum)) return null;
+    const target = volleyballSetTarget(setNum);
+    if(homeScore >= target - 1 && homeScore - awayScore >= 1) return 'home';
+    if(awayScore >= target - 1 && awayScore - homeScore >= 1) return 'away';
+    return null;
+  }
+
+  function volleyballMatchClincher(s){
+    if(s.sport !== 'volleyball' || s.setsWon.home >= 3 || s.setsWon.away >= 3) return null;
+
+    const setNum = s.volleyballSet;
+    const currentWinner = volleyballCurrentSetWinner(s.homeScore, s.awayScore, setNum);
+    if(currentWinner && s.setsWon[currentWinner] >= 2){
+      return { side: currentWinner, finalHome: s.homeScore, finalAway: s.awayScore };
+    }
+
+    const setPointSide = volleyballSetPointSideForScores(s.homeScore, s.awayScore, setNum);
+    if(!setPointSide || s.setsWon[setPointSide] < 2) return null;
+
+    return {
+      side: setPointSide,
+      finalHome: s.homeScore + (setPointSide === 'home' ? 1 : 0),
+      finalAway: s.awayScore + (setPointSide === 'away' ? 1 : 0)
+    };
+  }
+
+  function renderVolleyballEndMatchButton(s){
+    const clincher = volleyballMatchClincher(s);
+    const wrap = document.getElementById('vbEndMatchWrap');
+    wrap.classList.toggle('show', !!clincher);
+    if(!clincher) return;
+
+    const winnerName = clincher.side === 'home' ? s.home : s.away;
+    const finalSets = {
+      home: s.setsWon.home + (clincher.side === 'home' ? 1 : 0),
+      away: s.setsWon.away + (clincher.side === 'away' ? 1 : 0)
+    };
+    document.getElementById('vbEndMatchBtn').textContent = 'Final: End Match';
+    document.getElementById('vbEndMatchNote').textContent =
+      `Records Set ${s.volleyballSet} as ${clincher.finalHome}-${clincher.finalAway}, gives ${winnerName} the match ${finalSets.home}-${finalSets.away}, then tap Final.`;
+  }
+
   const SPORT_DISPLAY_NAMES = { soccer:'Soccer', basketball:'Basketball', volleyball:'Volleyball', baseball:'Baseball', softball:'Softball' };
+
+  function syncColorField(inputId, previewId, paletteId, hex){
+    const input = document.getElementById(inputId);
+    if(document.activeElement !== input) input.value = hex;
+    document.getElementById(previewId).style.background = hex;
+    markSelectedSwatch(paletteId, hex);
+  }
+
+  function colorOrDefault(value, fallback){
+    const hex = (value || '').trim().toUpperCase();
+    return /^#[0-9A-F]{6}$/.test(hex) ? hex : fallback;
+  }
 
   function render(s){
     document.querySelectorAll('.sport-tab').forEach(b => b.classList.toggle('active', b.dataset.sport === s.sport));
@@ -843,10 +929,6 @@
       const shown = el.dataset.sportSection.split(' ').includes(s.sport);
       el.style.display = shown ? (el.dataset.showDisplay || 'block') : 'none';
     });
-    document.querySelectorAll('[data-sport-preset]').forEach(el => {
-      el.style.display = el.dataset.sportPreset.split(' ').includes(s.sport) ? 'flex' : 'none';
-    });
-
     const sportName = SPORT_DISPLAY_NAMES[s.sport] || s.sport;
     document.getElementById('halftimeModeBtn').textContent = HALFTIME_BTN_LABELS[s.sport];
     document.getElementById('intermissionLabel').textContent = INTERMISSION_LABELS[s.sport];
@@ -865,12 +947,23 @@
     document.querySelectorAll('#halfRow .preset-btn').forEach(b => b.classList.toggle('active', b.dataset.half === s.half));
     document.querySelectorAll('#quarterRow .preset-btn').forEach(b => b.classList.toggle('active', b.dataset.quarter === s.quarter));
     document.querySelectorAll('#setRow .preset-btn').forEach(b => b.classList.toggle('active', parseInt(b.dataset.set,10) === s.volleyballSet));
-    renderIntermissionPresets(s);
     renderCustomTimerInput(s);
     renderTimerLive(s);
 
     document.getElementById('flashTopBtn').classList.toggle('active', s.scoreFlashPosition !== 'bottom');
     document.getElementById('flashBottomBtn').classList.toggle('active', s.scoreFlashPosition === 'bottom');
+    const homeFlashFill = s.homeScoreFlashColor || DEFAULT_SCORE_FLASH_COLOR;
+    const homeFlashOutline = s.homeScoreFlashOutline || DEFAULT_SCORE_FLASH_OUTLINE;
+    const awayFlashFill = s.awayScoreFlashColor || DEFAULT_SCORE_FLASH_COLOR;
+    const awayFlashOutline = s.awayScoreFlashOutline || DEFAULT_SCORE_FLASH_OUTLINE;
+    document.getElementById('homeFlashStyleLabel').textContent = s.home.toUpperCase();
+    document.getElementById('awayFlashStyleLabel').textContent = s.away.toUpperCase();
+    document.getElementById('homeFlashStyleSwatch').style.background = s.homeColor;
+    document.getElementById('awayFlashStyleSwatch').style.background = s.awayColor;
+    syncColorField('homeScoreFlashColor', 'homeScoreFlashColorPreview', 'homeScoreFlashColorPalette', homeFlashFill);
+    syncColorField('homeScoreFlashOutline', 'homeScoreFlashOutlinePreview', 'homeScoreFlashOutlinePalette', homeFlashOutline);
+    syncColorField('awayScoreFlashColor', 'awayScoreFlashColorPreview', 'awayScoreFlashColorPalette', awayFlashFill);
+    syncColorField('awayScoreFlashOutline', 'awayScoreFlashOutlinePreview', 'awayScoreFlashOutlinePalette', awayFlashOutline);
 
     document.getElementById('homeFouls').textContent = s.fouls.home;
     document.getElementById('awayFouls').textContent = s.fouls.away;
@@ -888,6 +981,7 @@
     document.getElementById('serveHomeBtn').classList.toggle('active', s.servingSide === 'home');
     document.getElementById('serveAwayBtn').classList.toggle('active', s.servingSide === 'away');
     renderVbBoxEditor(s);
+    renderVolleyballEndMatchButton(s);
 
     document.getElementById('inningNum').textContent = s.inning;
     document.getElementById('inningHalfBtn').textContent = s.inningHalf;
@@ -921,18 +1015,12 @@
     if(document.activeElement.id !== 'event') document.getElementById('event').value = s.event;
     if(document.activeElement.id !== 'kickoff') document.getElementById('kickoff').value = s.kickoff;
 
-    if(document.activeElement.id !== 'breakMode') document.getElementById('breakMode').value = s.breakMode;
-    if(document.activeElement.id !== 'breakTitle') document.getElementById('breakTitle').value = s.breakTitle;
-    if(document.activeElement.id !== 'sponsor') document.getElementById('sponsor').value = s.sponsor;
-    if(document.activeElement.id !== 'sponsorTag') document.getElementById('sponsorTag').value = s.sponsorTag;
-    if(document.activeElement.id !== 'footer') document.getElementById('footer').value = s.footer;
-    if(document.activeElement.id !== 'qr') document.getElementById('qr').value = s.qr;
-
     if(document.activeElement.id !== 'guestName') document.getElementById('guestName').value = s.guestName || '';
     if(document.activeElement.id !== 'guestTitle') document.getElementById('guestTitle').value = s.guestTitle || '';
     // Don't let the guest bug go on air blank before anything's been saved —
     // but don't fight the on-air cooldown countdown while one is running.
     if(!guestBugCooldownActive) document.getElementById('showGuestBugBtn').disabled = !s.guestName;
+    scheduleLayoutEditorSync();
   }
 
   document.querySelectorAll('.sport-tab').forEach(btn => {
@@ -1028,6 +1116,7 @@
   document.getElementById('serveAwayBtn').addEventListener('click', () => send({ type: 'SET_SERVE', side: 'away' }));
 
   document.getElementById('vbNextSetBtn').addEventListener('click', () => send({ type: 'VOLLEYBALL_NEXT_SET' }));
+  document.getElementById('vbEndMatchBtn').addEventListener('click', () => send({ type: 'VOLLEYBALL_END_MATCH' }));
   document.querySelectorAll('.vb-box-input').forEach(input => {
     input.addEventListener('change', () => {
       const value = parseInt(input.value, 10);
@@ -1053,14 +1142,6 @@
   document.getElementById('outBtn').addEventListener('click', () => send({ type: 'OUT_DELTA', delta: 1 }));
   document.getElementById('resetCountBtn').addEventListener('click', () => send({ type: 'BB_RESET_COUNT' }));
 
-  // Presets only arm a duration (highlighting it) — the countdown itself
-  // starts when the operator taps the halftime/"Set Break" live-scene
-  // button, so a single tap both goes live and starts the clock. If the
-  // break scene is already live, picking a different preset restarts the
-  // countdown immediately instead of waiting for another scene tap.
-  document.querySelectorAll('[data-seconds]').forEach(btn => {
-    btn.addEventListener('click', () => send({ type: 'SELECT_INTERMISSION_TIMER', seconds: parseInt(btn.dataset.seconds, 10) }));
-  });
   document.getElementById('customTimerBtn').addEventListener('click', () => {
     const seconds = parseClock(document.getElementById('customTimerInput').value);
     if(seconds !== null) send({ type: 'START_HALFTIME_TIMER', seconds });
@@ -1102,6 +1183,9 @@
     '#000000', // Black
     '#FFFFFF', // White
     '#7F8C8D'  // Gray
+  ];
+  const FLASH_OUTLINE_PALETTE = [
+    '#000000', '#FFFFFF', '#4B1E78', '#D4AF37'
   ];
 
   // ---- Shade slider support: base hue/saturation + a lightness slider ----
@@ -1166,7 +1250,7 @@
         input.dispatchEvent(new Event('input', { bubbles: true }));
         document.getElementById(previewId).style.background = hex;
         markSelectedSwatch(containerId, hex);
-        syncShadeControls(side, hex);
+        if(side) syncShadeControls(side, hex);
       });
       container.appendChild(btn);
     });
@@ -1178,6 +1262,10 @@
   }
   buildPalette('homePalette', 'homeColor', 'homeColorPreview', 'home', HOME_COLOR_PALETTE);
   buildPalette('awayPalette', 'awayColor', 'awayColorPreview', 'away', AWAY_COLOR_PALETTE);
+  buildPalette('homeScoreFlashColorPalette', 'homeScoreFlashColor', 'homeScoreFlashColorPreview', null, HOME_COLOR_PALETTE);
+  buildPalette('awayScoreFlashColorPalette', 'awayScoreFlashColor', 'awayScoreFlashColorPreview', null, AWAY_COLOR_PALETTE);
+  buildPalette('homeScoreFlashOutlinePalette', 'homeScoreFlashOutline', 'homeScoreFlashOutlinePreview', null, FLASH_OUTLINE_PALETTE);
+  buildPalette('awayScoreFlashOutlinePalette', 'awayScoreFlashOutline', 'awayScoreFlashOutlinePreview', null, FLASH_OUTLINE_PALETTE);
   document.getElementById('homeShade').style.setProperty('--slider-hue', '#4B1E78');
   document.getElementById('awayShade').style.setProperty('--slider-hue', '#1F5FAE');
 
@@ -1262,6 +1350,17 @@
   // Save buttons otherwise give no feedback that the click landed — grey out
   // and relabel on save, then pop back to normal the moment any watched
   // field changes again, so "greyed out" reads as "saved, nothing pending".
+  function wireScoreFlashColorInput(inputId, previewId, paletteId){
+    document.getElementById(inputId).addEventListener('input', (e) => {
+      document.getElementById(previewId).style.background = e.target.value;
+      markSelectedSwatch(paletteId, e.target.value);
+    });
+  }
+  wireScoreFlashColorInput('homeScoreFlashColor', 'homeScoreFlashColorPreview', 'homeScoreFlashColorPalette');
+  wireScoreFlashColorInput('homeScoreFlashOutline', 'homeScoreFlashOutlinePreview', 'homeScoreFlashOutlinePalette');
+  wireScoreFlashColorInput('awayScoreFlashColor', 'awayScoreFlashColorPreview', 'awayScoreFlashColorPalette');
+  wireScoreFlashColorInput('awayScoreFlashOutline', 'awayScoreFlashOutlinePreview', 'awayScoreFlashOutlinePalette');
+
   function makeSaveFeedback(btn, fieldIds){
     const defaultLabel = btn.textContent;
     function reset(){
@@ -1285,12 +1384,25 @@
     'homeLogoBg', 'awayLogoBg',
     'league', 'division', 'event', 'kickoff', 'awayTeamSelect'
   ]);
-  const markBreakSaved = makeSaveFeedback(document.getElementById('saveBreak'), [
-    'breakMode', 'breakTitle', 'sponsor', 'sponsorTag', 'footer', 'qr'
-  ]);
   const markGuestSaved = makeSaveFeedback(document.getElementById('saveGuest'), [
     'guestName', 'guestTitle'
   ]);
+  const markScoreFlashStyleSaved = makeSaveFeedback(document.getElementById('saveScoreFlashStyle'), [
+    'homeScoreFlashColor', 'homeScoreFlashOutline', 'awayScoreFlashColor', 'awayScoreFlashOutline'
+  ]);
+
+  document.getElementById('saveScoreFlashStyle').addEventListener('click', () => {
+    send({
+      type: 'UPDATE_SCORE_FLASH_STYLE',
+      data: {
+        homeScoreFlashColor: colorOrDefault(document.getElementById('homeScoreFlashColor').value, DEFAULT_SCORE_FLASH_COLOR),
+        homeScoreFlashOutline: colorOrDefault(document.getElementById('homeScoreFlashOutline').value, DEFAULT_SCORE_FLASH_OUTLINE),
+        awayScoreFlashColor: colorOrDefault(document.getElementById('awayScoreFlashColor').value, DEFAULT_SCORE_FLASH_COLOR),
+        awayScoreFlashOutline: colorOrDefault(document.getElementById('awayScoreFlashOutline').value, DEFAULT_SCORE_FLASH_OUTLINE)
+      }
+    });
+    markScoreFlashStyleSaved();
+  });
 
   document.getElementById('saveTeams').addEventListener('click', () => {
     send({
@@ -1316,21 +1428,6 @@
     markTeamsSaved();
   });
 
-  document.getElementById('saveBreak').addEventListener('click', () => {
-    send({
-      type: 'UPDATE_BREAK',
-      data: {
-        breakMode: document.getElementById('breakMode').value,
-        breakTitle: document.getElementById('breakTitle').value,
-        sponsor: document.getElementById('sponsor').value,
-        sponsorTag: document.getElementById('sponsorTag').value,
-        footer: document.getElementById('footer').value,
-        qr: document.getElementById('qr').value
-      }
-    });
-    markBreakSaved();
-  });
-
   document.getElementById('saveGuest').addEventListener('click', () => {
     send({
       type: 'UPDATE_GUEST',
@@ -1349,11 +1446,12 @@
   // still on screen. Date.now()-based remaining time, same technique as
   // renderTimer/renderTimerLive, so it can't drift.
   const BUG_ON_AIR_MS = 10000;
+  const CHALLENGE_RESULT_MS = 7000;
   let guestBugCooldownActive = false;
 
-  function startTriggerCooldown(btn, onDone){
+  function startTriggerCooldown(btn, onDone, durationMs = BUG_ON_AIR_MS){
     const defaultLabel = btn.textContent;
-    const endsAt = Date.now() + BUG_ON_AIR_MS;
+    const endsAt = Date.now() + durationMs;
     btn.disabled = true;
     const tick = () => {
       const remaining = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
@@ -1381,14 +1479,36 @@
       btn.disabled = !latestState || !latestState.guestName;
     });
   });
+  document.getElementById('showChallengeProgressBtn').addEventListener('click', () => {
+    send({ type: 'SHOW_CHALLENGE_IN_PROGRESS' });
+  });
+  document.getElementById('showChallengeSuccessBtn').addEventListener('click', (e) => {
+    send({ type: 'SHOW_CHALLENGE_SUCCESS' });
+    startTriggerCooldown(e.currentTarget, null, CHALLENGE_RESULT_MS);
+  });
+  document.getElementById('showChallengeFailedBtn').addEventListener('click', (e) => {
+    send({ type: 'SHOW_CHALLENGE_FAILED' });
+    startTriggerCooldown(e.currentTarget, null, CHALLENGE_RESULT_MS);
+  });
 
   // ---------------- Scorebug layout editor ----------------
   // Draft-then-save: dragging the proxy box only updates local `draft` and
   // moves the proxy div. Nothing reaches the server (or the real overlay)
   // until "Save Position" is clicked.
-  let layoutEditorState = null; // { previewScale, nativeWidth, nativeHeight }
-  let layoutDraft = { x: 0, y: 0, scale: 1 };
-  let layoutDragInfo = null;
+	  let layoutEditorState = null; // { previewScale, nativeWidth, nativeHeight }
+	  let layoutDraft = { x: 0, y: 0, scale: 1 };
+	  let challengeLayoutDraft = { x: 0, y: 0 };
+	  let layoutDragInfo = null;
+	  let layoutEditorSyncTimer = null;
+
+	  function scheduleLayoutEditorSync(delay = 80){
+	    const details = document.getElementById('layoutDetails');
+	    if(!details || !details.open || layoutDragInfo) return;
+	    clearTimeout(layoutEditorSyncTimer);
+	    layoutEditorSyncTimer = setTimeout(() => {
+	      if(details.open && !layoutDragInfo) initLayoutEditor();
+	    }, delay);
+	  }
 
   function initLayoutEditor(){
     const wrap = document.getElementById('layoutEditorWrap');
@@ -1396,42 +1516,73 @@
     const previewScale = wrap.clientWidth / 1920;
     frame.style.transform = `scale(${previewScale})`;
 
-    const base = Object.assign({ x: 0, y: 0, scale: 1 }, (latestState && latestState.scorebugLayout) || {});
-    layoutDraft = Object.assign({}, base);
+	    const base = Object.assign({ x: 0, y: 0, scale: 1 }, (latestState && latestState.scorebugLayout) || {});
+	    layoutDraft = Object.assign({}, base);
+	    challengeLayoutDraft = Object.assign({ x: 0, y: 0 }, (latestState && latestState.challengeBugLayout) || {});
+	
+	    let rect;
+	    let challengeRect;
+	    try {
+	      const stage = frame.contentDocument.querySelector('#scene-scorebug .stage');
+	      if(!stage) throw new Error('scorebug preview not ready');
+	      stage.style.transform = `translateX(-50%) translate(${base.x}px, ${base.y}px) scale(${base.scale})`;
+	      rect = stage.getBoundingClientRect();
+	      const challenge = frame.contentDocument.querySelector('#challengeBug');
+	      if(!challenge) throw new Error('challenge preview not ready');
+	      challenge.style.setProperty('--challenge-x', challengeLayoutDraft.x + 'px');
+	      challenge.style.setProperty('--challenge-y', challengeLayoutDraft.y + 'px');
+	      challenge.style.animation = 'none';
+	      challenge.style.opacity = '1';
+	      challenge.style.transform = 'translateX(-50%) translateY(0) scale(1)';
+	      challenge.classList.remove('success', 'failed');
+	      challenge.classList.add('in-progress');
+	      challengeRect = challenge.getBoundingClientRect();
+	    } catch (e) {
+	      rect = { left: 1920 * 0.25, top: 1080 * 0.72, width: 1920 * 0.5, height: 1080 * 0.12 };
+	      challengeRect = { left: 1920 * 0.36, top: 96, width: 1920 * 0.28, height: 100 };
+	    }
+	    layoutEditorState = {
+	      previewScale,
+	      nativeWidth: rect.width / base.scale,
+	      nativeHeight: rect.height / base.scale
+	    };
+	    positionLayoutProxy(rect.left * previewScale, rect.top * previewScale, rect.width * previewScale, rect.height * previewScale);
+	    positionChallengeLayoutProxy(challengeRect.left * previewScale, challengeRect.top * previewScale, challengeRect.width * previewScale, challengeRect.height * previewScale);
+	    updateLayoutReadout();
+	    updateChallengeLayoutReadout();
+	    updateSnapGuides(false, false);
+	  }
 
-    let rect;
-    try {
-      const stage = frame.contentDocument.querySelector('#scene-scorebug .stage');
-      rect = stage.getBoundingClientRect();
-    } catch (e) {
-      rect = { left: 1920 * 0.25, top: 1080 * 0.72, width: 1920 * 0.5, height: 1080 * 0.12 };
-    }
-    layoutEditorState = {
-      previewScale,
-      nativeWidth: rect.width / base.scale,
-      nativeHeight: rect.height / base.scale
-    };
-    positionLayoutProxy(rect.left * previewScale, rect.top * previewScale, rect.width * previewScale, rect.height * previewScale);
-    updateLayoutReadout();
-    updateSnapGuides(false, false);
-  }
+	  function positionLayoutProxy(left, top, width, height){
+	    const proxy = document.getElementById('layoutProxy');
+	    proxy.style.left = left + 'px';
+	    proxy.style.top = top + 'px';
+	    proxy.style.width = width + 'px';
+	    proxy.style.height = height + 'px';
+	  }
 
-  function positionLayoutProxy(left, top, width, height){
-    const proxy = document.getElementById('layoutProxy');
-    proxy.style.left = left + 'px';
-    proxy.style.top = top + 'px';
-    proxy.style.width = width + 'px';
-    proxy.style.height = height + 'px';
-  }
+	  function positionChallengeLayoutProxy(left, top, width, height){
+	    const proxy = document.getElementById('challengeLayoutProxy');
+	    proxy.style.left = left + 'px';
+	    proxy.style.top = top + 'px';
+	    proxy.style.width = width + 'px';
+	    proxy.style.height = height + 'px';
+	  }
+	
+	  function updateLayoutReadout(){
+	    document.getElementById('layoutReadout').textContent =
+	      `x:${Math.round(layoutDraft.x)} y:${Math.round(layoutDraft.y)} scale:${layoutDraft.scale.toFixed(2)}`;
+	  }
 
-  function updateLayoutReadout(){
-    document.getElementById('layoutReadout').textContent =
-      `x:${Math.round(layoutDraft.x)} y:${Math.round(layoutDraft.y)} scale:${layoutDraft.scale.toFixed(2)}`;
-  }
+	  function updateChallengeLayoutReadout(){
+	    document.getElementById('challengeLayoutReadout').textContent =
+	      `challenge x:${Math.round(challengeLayoutDraft.x)} y:${Math.round(challengeLayoutDraft.y)}`;
+	  }
 
   document.getElementById('layoutDetails').addEventListener('toggle', function(){
     if(this.open) setTimeout(initLayoutEditor, 60);
   });
+  document.getElementById('layoutPreviewFrame').addEventListener('load', () => scheduleLayoutEditorSync(0));
 
   document.getElementById('layoutProxy').addEventListener('pointerdown', (e) => {
     if(e.target.id === 'layoutProxyHandle') return;
@@ -1448,9 +1599,9 @@
     document.addEventListener('pointerup', onLayoutDragEnd, { once: true });
   });
 
-  document.getElementById('layoutProxyHandle').addEventListener('pointerdown', (e) => {
-    e.preventDefault(); e.stopPropagation();
-    const proxy = document.getElementById('layoutProxy');
+	  document.getElementById('layoutProxyHandle').addEventListener('pointerdown', (e) => {
+	    e.preventDefault(); e.stopPropagation();
+	    const proxy = document.getElementById('layoutProxy');
     const left = parseFloat(proxy.style.left), top = parseFloat(proxy.style.top);
     const width = parseFloat(proxy.style.width), height = parseFloat(proxy.style.height);
     layoutDragInfo = {
@@ -1459,9 +1610,23 @@
       centerX: left + width / 2, centerY: top + height / 2,
       startDraftScale: layoutDraft.scale
     };
-    document.addEventListener('pointermove', onLayoutDragMove);
-    document.addEventListener('pointerup', onLayoutDragEnd, { once: true });
-  });
+	    document.addEventListener('pointermove', onLayoutDragMove);
+	    document.addEventListener('pointerup', onLayoutDragEnd, { once: true });
+	  });
+
+	  document.getElementById('challengeLayoutProxy').addEventListener('pointerdown', (e) => {
+	    e.preventDefault();
+	    const proxy = document.getElementById('challengeLayoutProxy');
+	    layoutDragInfo = {
+	      mode: 'challenge',
+	      startClientX: e.clientX, startClientY: e.clientY,
+	      startLeft: parseFloat(proxy.style.left), startTop: parseFloat(proxy.style.top),
+	      startWidth: parseFloat(proxy.style.width), startHeight: parseFloat(proxy.style.height),
+	      startDraftX: challengeLayoutDraft.x, startDraftY: challengeLayoutDraft.y
+	    };
+	    document.addEventListener('pointermove', onLayoutDragMove);
+	    document.addEventListener('pointerup', onLayoutDragEnd, { once: true });
+	  });
 
   const SNAP_THRESHOLD_PX = 10; // preview-space pixels
 
@@ -1474,7 +1639,31 @@
     if(!layoutDragInfo) return;
     const dxPreview = e.clientX - layoutDragInfo.startClientX;
     const dyPreview = e.clientY - layoutDragInfo.startClientY;
-    if(layoutDragInfo.mode === 'move'){
+	    if(layoutDragInfo.mode === 'challenge'){
+	      const wrap = document.getElementById('layoutEditorWrap');
+	      const width = layoutDragInfo.startWidth, height = layoutDragInfo.startHeight;
+	      let newLeft = layoutDragInfo.startLeft + dxPreview;
+	      let newTop = layoutDragInfo.startTop + dyPreview;
+	      newLeft = Math.min(Math.max(newLeft, 0), wrap.clientWidth - width);
+	      newTop = Math.min(Math.max(newTop, 0), wrap.clientHeight - height);
+
+	      const canvasCenterX = wrap.clientWidth / 2;
+	      const canvasCenterY = wrap.clientHeight / 2;
+	      const snappedX = Math.abs((newLeft + width / 2) - canvasCenterX) < SNAP_THRESHOLD_PX;
+	      const snappedY = Math.abs((newTop + height / 2) - canvasCenterY) < SNAP_THRESHOLD_PX;
+	      if(snappedX) newLeft = canvasCenterX - width / 2;
+	      if(snappedY) newTop = canvasCenterY - height / 2;
+	      updateSnapGuides(snappedX, snappedY);
+
+	      positionChallengeLayoutProxy(newLeft, newTop, width, height);
+	      challengeLayoutDraft.x = layoutDragInfo.startDraftX + (newLeft - layoutDragInfo.startLeft) / layoutEditorState.previewScale;
+	      challengeLayoutDraft.y = layoutDragInfo.startDraftY + (newTop - layoutDragInfo.startTop) / layoutEditorState.previewScale;
+	      try {
+	        const challenge = document.getElementById('layoutPreviewFrame').contentDocument.querySelector('#challengeBug');
+	        challenge.style.setProperty('--challenge-x', challengeLayoutDraft.x + 'px');
+	        challenge.style.setProperty('--challenge-y', challengeLayoutDraft.y + 'px');
+	      } catch (e) {}
+	    } else if(layoutDragInfo.mode === 'move'){
       const wrap = document.getElementById('layoutEditorWrap');
       const width = layoutDragInfo.startWidth, height = layoutDragInfo.startHeight;
       let newLeft = layoutDragInfo.startLeft + dxPreview;
@@ -1521,8 +1710,9 @@
       positionLayoutProxy(layoutDragInfo.centerX - newWidth / 2, layoutDragInfo.centerY - newHeight / 2, newWidth, newHeight);
       layoutDraft.scale = newScale;
     }
-    updateLayoutReadout();
-  }
+	    updateLayoutReadout();
+	    updateChallengeLayoutReadout();
+	  }
 
   function onLayoutDragEnd(){
     document.removeEventListener('pointermove', onLayoutDragMove);
@@ -1548,20 +1738,38 @@
     flashLayoutSaveConfirm('Position Saved ✓');
   });
   document.getElementById('layoutCancelBtn').addEventListener('click', initLayoutEditor);
-  document.getElementById('layoutSaveForSportBtn').addEventListener('click', () => {
-    if(latestState){
-      send({ type: 'SAVE_SCOREBUG_LAYOUT_FOR_SPORT', sport: latestState.sport, x: layoutDraft.x, y: layoutDraft.y, scale: layoutDraft.scale });
-      flashLayoutSaveConfirm('Saved as Default ✓');
-    }
-  });
-  document.getElementById('layoutResetForSportBtn').addEventListener('click', () => {
-    if(latestState){
-      send({ type: 'RESET_SCOREBUG_LAYOUT_FOR_SPORT', sport: latestState.sport });
-      setTimeout(initLayoutEditor, 200);
-    }
-  });
+	  document.getElementById('layoutSaveForSportBtn').addEventListener('click', () => {
+	    if(latestState){
+	      send({
+	        type: 'SAVE_SCOREBUG_LAYOUT_FOR_SPORT',
+	        sport: latestState.sport,
+	        x: layoutDraft.x,
+	        y: layoutDraft.y,
+	        scale: layoutDraft.scale,
+	        challengeX: challengeLayoutDraft.x,
+	        challengeY: challengeLayoutDraft.y
+	      });
+	      flashLayoutSaveConfirm('Saved as Default ✓');
+	    }
+	  });
+	  document.getElementById('layoutResetForSportBtn').addEventListener('click', () => {
+	    if(latestState){
+	      send({ type: 'RESET_SCOREBUG_LAYOUT_FOR_SPORT', sport: latestState.sport });
+	      setTimeout(initLayoutEditor, 200);
+	    }
+	  });
+	  document.getElementById('challengeLayoutSaveBtn').addEventListener('click', () => {
+	    send({ type: 'SET_CHALLENGE_BUG_LAYOUT', x: challengeLayoutDraft.x, y: challengeLayoutDraft.y });
+	    flashLayoutSaveConfirm('Challenge Position Saved ✓');
+	  });
+	  document.getElementById('challengeLayoutResetBtn').addEventListener('click', () => {
+	    send({ type: 'RESET_CHALLENGE_BUG_LAYOUT' });
+	    challengeLayoutDraft = { x: 0, y: 0 };
+	    setTimeout(initLayoutEditor, 200);
+	    flashLayoutSaveConfirm('Challenge Position Reset ✓');
+	  });
 
-  // ---------------- Tablet/desktop dashboard columns ----------------
+	  // ---------------- Tablet/desktop dashboard columns ----------------
   // Real DOM moves rather than CSS grid-column (see the .layout-grid
   // comment in <style>): elements are relocated, not cloned, so their IDs,
   // listeners, and state (an open <details>, the layout-editor iframe)
@@ -1571,15 +1779,12 @@
   const dashColA = document.getElementById('dashColA');
   const dashColB = document.getElementById('dashColB');
   const mobileOrder = Array.from(dashGrid.children).filter(el => el !== dashColA && el !== dashColB);
-  // Soccer/basketball fill column 1 with the Half/Quarter section below the
-  // score; volleyball/baseball/softball have no such section here, so their
-  // own sport section (set/sets-won/serving, or inning/count/runners) takes
-  // that slot instead — otherwise column 1 would sit mostly empty for those
-  // sports while column 2 carried everything.
-  const dashColASelectors = ['.pri-score', '.pri-primary-stats', '.pri-col1-sport', '.pri-reset',
-    '.pri-commentator-bug', '.pri-guest-setup'];
-  const dashColBSelectors = ['.pri-secondary-stats', '.pri-scene', '.pri-layout-setup', '.pri-break',
-    '.pri-flash-position', '.pri-team-setup', '.pri-break-setup'];
+  // Operator controls stay together in the first column for iPad use, while
+  // the second column carries the game-state controls that change during play.
+  const dashColASelectors = ['.pri-score', '.pri-primary-stats', '.pri-col1-sport', '.pri-secondary-stats',
+    '.pri-reset'];
+  const dashColBSelectors = ['.pri-scene', '.pri-layout-setup', '.pri-on-air-bugs', '.pri-break',
+    '.pri-team-setup'];
 
   function applyDashboardMode(mql){
     if(mql.matches){

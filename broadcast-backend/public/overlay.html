@@ -94,18 +94,27 @@
   .name-sm{font-family:var(--display);font-weight:700;font-size:30px;letter-spacing:0.5px;
     color:var(--white);text-transform:uppercase;white-space:nowrap;overflow:hidden;
     text-overflow:ellipsis;max-width:100%;}
-  .name-full{font-family:var(--body);font-weight:600;font-size:13px;letter-spacing:0.5px;
-    color:rgba(255,255,255,0.55);text-transform:uppercase;white-space:nowrap;
-    overflow:hidden;text-overflow:ellipsis;max-width:100%;margin-top:1px;}
-  .name-full:empty{display:none;}
-  .serve-dot{width:10px;height:10px;border-radius:50%;background:var(--gold);display:none;flex-shrink:0;}
-  .serve-dot.show{display:block;}
+	  .name-full{font-family:var(--body);font-weight:600;font-size:13px;letter-spacing:0.5px;
+	    color:rgba(255,255,255,0.55);text-transform:uppercase;white-space:nowrap;
+	    overflow:hidden;text-overflow:ellipsis;max-width:100%;margin-top:1px;}
+	  .name-full:empty{display:none;}
+	  .set-point-badge{position:absolute;bottom:-30px;background:var(--gold);color:#1a1400;
+	    font-family:var(--display);font-weight:800;font-size:14px;letter-spacing:2px;
+	    text-transform:uppercase;padding:4px 10px;line-height:1;border:1px solid rgba(0,0,0,0.28);
+	    box-shadow:0 6px 14px rgba(0,0,0,0.35);display:none;pointer-events:none;white-space:nowrap;}
+	  .set-point-badge.show{display:block;}
+	  .team.home .set-point-badge{left:94px;}
+	  .team.away .set-point-badge{right:94px;}
+	  .serve-dot{width:10px;height:10px;border-radius:50%;background:var(--gold);display:none;flex-shrink:0;}
+	  .serve-dot.show{display:block;}
   .score-stack{position:relative;display:flex;flex-direction:column;align-items:center;}
   .score-sm{font-family:var(--display);font-weight:800;font-size:44px;color:var(--white);min-width:56px;text-align:center;}
   .score-sm.flash{animation:pop .5s ease;}
   .score-flash{position:absolute;top:-38px;left:50%;transform:translateX(-50%) scale(0.6);opacity:0;
-    font-family:var(--display);font-weight:800;font-size:26px;color:var(--gold);
-    text-shadow:0 2px 8px rgba(0,0,0,0.6);pointer-events:none;white-space:nowrap;}
+    font-family:var(--display);font-weight:800;font-size:26px;color:var(--flash-fill,var(--gold));
+    -webkit-text-stroke:0.75px var(--flash-outline,#000);
+    text-shadow:0 2px 8px rgba(0,0,0,0.6);
+    pointer-events:none;white-space:nowrap;}
   .score-flash.show{animation:rise 1.6s ease forwards;}
   .sub-stat{font-family:var(--body);font-weight:600;font-size:12px;color:rgba(255,255,255,0.6);
     letter-spacing:1px;text-transform:uppercase;margin-top:-4px;display:none;}
@@ -164,7 +173,7 @@
     75%{opacity:1;transform:translateX(-50%) translateY(10px) scale(1);}
     100%{opacity:0;transform:translateX(-50%) translateY(26px) scale(0.9);}}
 
-  /* ---------- SHARED CARD (matchup / halftime / break) ---------- */
+  /* ---------- SHARED CARD (matchup / halftime / final) ---------- */
   .card{position:absolute;top:50%;left:50%;transform:translate(-50%,-46%) scale(0.96);
     background:var(--panel-alpha);
     /* Brand accent frame — tied to --home-color (always EAC's purple,
@@ -230,6 +239,9 @@
 
   /* ---------- VOLLEYBALL SET RECAP ---------- */
   #scene-vb-recap .card{width:1520px;padding:48px 64px 40px;}
+  #scene-vb-recap .card.compact-break{top:46px;width:1320px;padding:16px 24px 16px;
+    align-items:stretch;transform:translate(-50%,-12px) scale(0.96);}
+  #scene-vb-recap.active .card.compact-break{transform:translate(-50%,0) scale(1);}
   .vb-recap-tag{font-family:var(--display);font-weight:700;font-size:20px;letter-spacing:6px;
     color:var(--gold);text-transform:uppercase;margin-bottom:8px;}
   .vb-recap-event{font-family:var(--display);font-weight:800;font-size:38px;color:var(--white);
@@ -267,6 +279,23 @@
      on the Final scene, where a countdown makes no sense. */
   .vb-recap-timer-wrap{margin-top:28px;text-align:center;}
   .vb-recap-timer-wrap.hide{display:none;}
+  .compact-break .vb-recap-tag{font-size:14px;letter-spacing:4px;margin:0 0 8px;}
+  .compact-break .vb-recap-event,.compact-break .vb-recap-sub{display:none;}
+  .compact-break .vb-table{padding-right:170px;}
+  .compact-break .vb-header-row,.compact-break .vb-team-row{grid-template-columns:230px 70px repeat(5,66px);}
+  .compact-break .vb-header-row{padding-bottom:6px;}
+  .compact-break .vb-team-row{padding:7px 0;}
+  .compact-break .vb-col-team{gap:10px;}
+  .compact-break .vb-crest{width:34px;height:34px;font-size:15px;border-width:1px;}
+  .compact-break .vb-team-name{font-size:18px;letter-spacing:0.3px;}
+  .compact-break .vb-team-full{display:none;}
+  .compact-break .vb-overall-num{font-size:28px;}
+  .compact-break .vb-set-num{font-size:23px;}
+  .compact-break .vb-header-label{font-size:10px;letter-spacing:1px;}
+  .compact-break .vb-recap-timer-wrap{position:absolute;right:24px;top:50%;transform:translateY(-50%);
+    width:130px;margin:0;padding-left:22px;border-left:1px solid var(--line);}
+  .compact-break .back-in{margin:0;font-size:11px;letter-spacing:1.5px;}
+  .compact-break .timer{font-size:42px;line-height:1;margin-top:6px;}
   /* Match Final — takes over the same slot below the table when the
      operator's actually on the Final scene, with the gold .match-final card
      frame (see .card.match-final) doing the rest of the work to make this
@@ -278,20 +307,6 @@
     color:var(--gold);text-transform:uppercase;}
   .vb-final-tally{font-family:var(--display);font-weight:800;font-size:64px;color:var(--white);
     margin-top:2px;line-height:1;}
-
-  #scene-break .card{width:1000px;padding:52px 60px 44px;}
-  .label-sm{font-family:var(--display);font-weight:700;font-size:18px;letter-spacing:6px;
-    color:var(--gold);text-transform:uppercase;margin-bottom:10px;}
-  .title-md{font-family:var(--display);font-weight:800;font-size:46px;color:var(--white);
-    letter-spacing:2px;text-transform:uppercase;margin-bottom:34px;}
-  .content{display:flex;align-items:center;gap:48px;width:100%;
-    border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:30px 0;}
-  .sponsor-name{font-family:var(--display);font-weight:800;font-size:38px;color:var(--white);flex:1;}
-  .sponsor-tag{font-family:var(--body);font-weight:500;font-size:15px;color:rgba(255,255,255,0.6);margin-top:6px;}
-  .qr{width:150px;height:150px;background:var(--white);flex-shrink:0;display:flex;align-items:center;justify-content:center;
-    font-family:var(--body);font-size:11px;color:#888;text-align:center;padding:8px;box-sizing:border-box;}
-  .footer{margin-top:26px;font-family:var(--body);font-weight:600;font-size:14px;letter-spacing:2px;
-    color:rgba(255,255,255,0.5);text-transform:uppercase;}
 
   /* ---------- COMMENTATOR / GUEST BUGS ----------
      Bottom-corner "now on air" bugs, siblings of .scene (not inside any one
@@ -332,6 +347,34 @@
     100%{opacity:0;transform:translateX(40px);}
   }
 
+  .challenge-bug{position:absolute;top:calc(96px + var(--challenge-y, 0px));left:calc(50% + var(--challenge-x, 0px));transform:translateX(-50%) translateY(-24px);
+    min-width:520px;background:var(--panel-alpha);border:3px solid var(--gold);
+    padding:18px 34px 20px;text-align:center;filter:drop-shadow(0 14px 34px rgba(0,0,0,0.48));
+    opacity:0;pointer-events:none;z-index:6;clip-path:polygon(0 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,14px 100%,0 calc(100% - 14px));}
+  .challenge-eyebrow{font-family:var(--display);font-weight:700;font-size:15px;letter-spacing:5px;
+    color:var(--gold);text-transform:uppercase;margin-bottom:4px;}
+  .challenge-status{font-family:var(--display);font-weight:800;font-size:38px;letter-spacing:1.5px;
+    color:var(--white);text-transform:uppercase;line-height:1;}
+  .challenge-sub{font-family:var(--body);font-weight:700;font-size:12px;letter-spacing:2px;
+    color:rgba(255,255,255,0.58);text-transform:uppercase;margin-top:9px;}
+  .challenge-bug.in-progress{animation:challengeIn .35s ease forwards;}
+  .challenge-bug.success{border-color:#3CA35A;animation:challengeResult 7s ease forwards;}
+  .challenge-bug.success .challenge-eyebrow{color:#C9A7FF;}
+  .challenge-bug.success .challenge-status{color:#3CA35A;}
+  .challenge-bug.failed{border-color:#C24343;animation:challengeResult 7s ease forwards;}
+  .challenge-bug.failed .challenge-eyebrow{color:#C9A7FF;}
+  .challenge-bug.failed .challenge-status{color:#C24343;}
+  @keyframes challengeIn{
+    0%{opacity:0;transform:translateX(-50%) translateY(-24px) scale(0.96);}
+    100%{opacity:1;transform:translateX(-50%) translateY(0) scale(1);}
+  }
+  @keyframes challengeResult{
+    0%{opacity:0;transform:translateX(-50%) translateY(-20px) scale(0.96);}
+    8%{opacity:1;transform:translateX(-50%) translateY(0) scale(1);}
+    88%{opacity:1;transform:translateX(-50%) translateY(0) scale(1);}
+    100%{opacity:0;transform:translateX(-50%) translateY(-18px) scale(0.98);}
+  }
+
 </style>
 </head>
 <body>
@@ -342,11 +385,12 @@
         <div class="team home">
           <div class="stripe"></div>
           <div class="crest-sm" id="homeCrest">H</div>
-          <div class="name-col">
-            <div class="name-wrap"><div class="serve-dot" id="homeServe"></div><div class="name-sm" id="homeName">HOME</div></div>
-            <div class="name-full" id="homeFullName"></div>
-          </div>
-          <div class="score-stack">
+	          <div class="name-col">
+	            <div class="name-wrap"><div class="serve-dot" id="homeServe"></div><div class="name-sm" id="homeName">HOME</div></div>
+	            <div class="name-full" id="homeFullName"></div>
+	          </div>
+	          <div class="set-point-badge" id="homeSetPointBadge">Set Point</div>
+	          <div class="score-stack">
             <div class="score-flash" id="homeFlash"></div>
             <div class="score-sm" id="homeScore">0</div>
             <div class="sub-stat" id="homeSubStat"></div>
@@ -369,11 +413,12 @@
             <div class="score-sm" id="awayScore">0</div>
             <div class="sub-stat" id="awaySubStat"></div>
           </div>
-          <div class="name-col">
-            <div class="name-wrap"><div class="name-sm" id="awayName">AWAY</div><div class="serve-dot" id="awayServe"></div></div>
-            <div class="name-full" id="awayFullName"></div>
-          </div>
-          <div class="crest-sm" id="awayCrest">A</div>
+	          <div class="name-col">
+	            <div class="name-wrap"><div class="name-sm" id="awayName">AWAY</div><div class="serve-dot" id="awayServe"></div></div>
+	            <div class="name-full" id="awayFullName"></div>
+	          </div>
+	          <div class="set-point-badge" id="awaySetPointBadge">Set Point</div>
+	          <div class="crest-sm" id="awayCrest">A</div>
           <div class="stripe"></div>
         </div>
       </div>
@@ -484,22 +529,6 @@
     </div>
   </div>
 
-  <div class="scene" id="scene-break">
-    <div class="card">
-      <div class="label-sm" id="tag">BREAK</div>
-      <div class="title-md" id="breakTitle">We'll Be Right Back</div>
-      <div class="content">
-        <div>
-          <div class="sponsor-name" id="sponsorName">Sponsor Name</div>
-          <div class="sponsor-tag" id="sponsorTag">Thanks for supporting local sports</div>
-        </div>
-        <img class="qr" id="qrImg" style="display:none;object-fit:contain;" />
-        <div class="qr" id="qrPlaceholder">QR CODE</div>
-      </div>
-      <div class="footer" id="footer">LIVE COVERAGE</div>
-    </div>
-  </div>
-
   <div class="scene" id="scene-water">
     <div class="card">
       <div class="title-lg">Water Break</div>
@@ -557,6 +586,12 @@
     <div class="bug-sub" id="guestBugTitle">Guest Title</div>
   </div>
 
+  <div class="challenge-bug" id="challengeBug">
+    <div class="challenge-eyebrow" id="challengeEyebrow">Coach's Challenge</div>
+    <div class="challenge-status" id="challengeStatus">Challenge In Progress</div>
+    <div class="challenge-sub" id="challengeSub">Review underway</div>
+  </div>
+
 <script>
   // Scales+centers the fixed 1920x1080 canvas (body) to fit whatever
   // viewport is actually showing this page — see the CSS comment above body
@@ -572,13 +607,18 @@
   fitToViewport();
   window.addEventListener('resize', fitToViewport);
 
-  const SCENES = ['scorebug','matchup','halftime','break','vb-recap','water','final'];
+  const SCENES = ['scorebug','matchup','halftime','vb-recap','water','final'];
   const KICKOFF_LABELS = { soccer:'Kickoff', basketball:'Tip-off', volleyball:'First Serve', baseball:'First Pitch', softball:'First Pitch' };
   const HALFTIME_TITLES = { soccer:'Halftime', basketball:'Halftime', volleyball:'Set Break', baseball:'Inning Break', softball:'Inning Break' };
 
   function applyTeamColors(s){
     document.documentElement.style.setProperty('--home-color', s.homeColor);
     document.documentElement.style.setProperty('--away-color', s.awayColor);
+  }
+
+  function setScoreFlashStyle(el, fill, outline){
+    el.style.setProperty('--flash-fill', fill || '#D4AF37');
+    el.style.setProperty('--flash-outline', outline || '#000000');
   }
 
   // The control panel's Scorebug Layout editor embeds this page in an
@@ -640,6 +680,18 @@
     }
   }
 
+  function volleyballSetPointSide(s){
+    const target = s.volleyballSet >= 5 ? 15 : 25;
+    const homeAlreadyWon = s.homeScore >= target && s.homeScore - s.awayScore >= 2;
+    const awayAlreadyWon = s.awayScore >= target && s.awayScore - s.homeScore >= 2;
+    if(homeAlreadyWon || awayAlreadyWon) return null;
+    const homeWinsNext = s.homeScore + 1 >= target && (s.homeScore + 1) - s.awayScore >= 2;
+    const awayWinsNext = s.awayScore + 1 >= target && (s.awayScore + 1) - s.homeScore >= 2;
+    if(homeWinsNext) return 'home';
+    if(awayWinsNext) return 'away';
+    return null;
+  }
+
   function renderVbBoxScore(s){
     const row = document.getElementById('vbBoxRow');
     row.classList.add('show');
@@ -670,6 +722,7 @@
     // made Set Break and Timeout collapse into "FINAL" the moment either
     // side reached 3 sets, regardless of which button was tapped.
     const isFinal = s.mode === 'final';
+    const isCompactBreak = s.mode === 'halftime' || s.mode === 'timeout';
 
     document.getElementById('vbRecapTag').textContent =
       isFinal ? 'FINAL' : (s.mode === 'timeout' ? 'TIMEOUT' : 'SET BREAK');
@@ -678,6 +731,7 @@
     document.getElementById('vbRecapTimerWrap').classList.toggle('hide', isFinal);
     document.getElementById('vbFinalBanner').classList.toggle('hide', !isFinal);
     document.getElementById('vbRecapCard').classList.toggle('match-final', isFinal);
+    document.getElementById('vbRecapCard').classList.toggle('compact-break', isCompactBreak);
     if(isFinal){
       const homeWon = s.setsWon.home > s.setsWon.away;
       const winnerName = (homeWon ? s.home : s.away) || (homeWon ? 'HOME' : 'AWAY');
@@ -720,6 +774,8 @@
     setMode(s.mode, s.sport);
     document.getElementById('homeFlash').classList.toggle('pos-bottom', s.scoreFlashPosition === 'bottom');
     document.getElementById('awayFlash').classList.toggle('pos-bottom', s.scoreFlashPosition === 'bottom');
+    setScoreFlashStyle(document.getElementById('homeFlash'), s.homeScoreFlashColor, s.homeScoreFlashOutline);
+    setScoreFlashStyle(document.getElementById('awayFlash'), s.awayScoreFlashColor, s.awayScoreFlashOutline);
 
     document.getElementById('homeName').textContent = s.home;
     document.getElementById('awayName').textContent = s.away;
@@ -752,12 +808,14 @@
     document.querySelector('.stage').style.setProperty('--flash-bottom-extra',
       flushMode ? (periodStripEl.offsetHeight + 10) + 'px' : '0px');
 
-    // Sport-specific sub-stats on the scorebug
-    const homeSub = document.getElementById('homeSubStat');
-    const awaySub = document.getElementById('awaySubStat');
-    const extra = document.getElementById('extra');
-    homeSub.classList.remove('show'); awaySub.classList.remove('show');
-    extra.classList.remove('show');
+	    // Sport-specific sub-stats on the scorebug
+	    const homeSub = document.getElementById('homeSubStat');
+	    const awaySub = document.getElementById('awaySubStat');
+	    const extra = document.getElementById('extra');
+	    homeSub.classList.remove('show'); awaySub.classList.remove('show');
+	    extra.classList.remove('show');
+	    document.getElementById('homeSetPointBadge').classList.remove('show');
+	    document.getElementById('awaySetPointBadge').classList.remove('show');
     document.getElementById('homeServe').classList.remove('show');
     document.getElementById('awayServe').classList.remove('show');
     document.getElementById('vbBoxRow').classList.remove('show');
@@ -769,12 +827,18 @@
       homeSub.classList.add('show'); awaySub.classList.add('show');
       extra.textContent = 'TO ' + s.timeouts.home + '-' + s.timeouts.away;
       extra.classList.add('show');
-    } else if(s.sport === 'volleyball'){
-      extra.textContent = 'SETS ' + s.setsWon.home + '-' + s.setsWon.away;
-      extra.classList.add('show');
-      document.getElementById('homeServe').classList.toggle('show', s.servingSide === 'home');
-      document.getElementById('awayServe').classList.toggle('show', s.servingSide === 'away');
-      renderVbBoxScore(s);
+	    } else if(s.sport === 'volleyball'){
+	      extra.textContent = 'SETS ' + s.setsWon.home + '-' + s.setsWon.away;
+	      extra.classList.add('show');
+	      document.getElementById('homeServe').classList.toggle('show', s.servingSide === 'home');
+	      document.getElementById('awayServe').classList.toggle('show', s.servingSide === 'away');
+	      const setPointSide = volleyballSetPointSide(s);
+	      if(setPointSide === 'home'){
+	        document.getElementById('homeSetPointBadge').classList.add('show');
+	      } else if(setPointSide === 'away'){
+	        document.getElementById('awaySetPointBadge').classList.add('show');
+	      }
+	      renderVbBoxScore(s);
     } else if(s.sport === 'baseball' || s.sport === 'softball'){
       document.getElementById('miniDiamond').classList.add('show');
       document.getElementById('mbFirst').classList.toggle('on', s.bases.first);
@@ -827,32 +891,25 @@
     document.getElementById('finalHomeScore').textContent = s.homeScore;
     document.getElementById('finalAwayScore').textContent = s.awayScore;
 
-    const labels = { timeout: 'TIMEOUT', brb: 'BREAK', sponsor: 'SPONSOR' };
-    document.getElementById('tag').textContent = labels[s.breakMode] || 'BREAK';
-    document.getElementById('breakTitle').textContent = s.breakTitle;
-    document.getElementById('sponsorName').textContent = s.sponsor;
-    document.getElementById('sponsorTag').textContent = s.sponsorTag;
-    document.getElementById('footer').textContent = s.footer;
-    if(s.qr){
-      document.getElementById('qrImg').src = s.qr;
-      document.getElementById('qrImg').style.display = 'block';
-      document.getElementById('qrPlaceholder').style.display = 'none';
-    } else {
-      document.getElementById('qrImg').style.display = 'none';
-      document.getElementById('qrPlaceholder').style.display = 'flex';
-    }
-
     document.getElementById('guestBugName').textContent = s.guestName || '';
     document.getElementById('guestBugTitle').textContent = s.guestTitle || '';
 
     renderTimer(s);
     renderVbRecap(s);
     applyScorebugLayout(s.scorebugLayout || { x: 0, y: 0, scale: 1 });
+    applyChallengeBugLayout(s.challengeBugLayout || { x: 0, y: 0 });
   }
 
   function applyScorebugLayout(layout){
     document.querySelector('#scene-scorebug .stage').style.transform =
       `translateX(-50%) translate(${layout.x}px, ${layout.y}px) scale(${layout.scale})`;
+  }
+
+  function applyChallengeBugLayout(layout){
+    const el = document.getElementById('challengeBug');
+    const safe = Object.assign({ x: 0, y: 0 }, layout || {});
+    el.style.setProperty('--challenge-x', safe.x + 'px');
+    el.style.setProperty('--challenge-y', safe.y + 'px');
   }
 
   // Drives both the plain halftime scene's #timer and the volleyball recap
@@ -884,6 +941,32 @@
     el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
   }
 
+  function showChallenge(status){
+    const el = document.getElementById('challengeBug');
+    const eyebrow = document.getElementById('challengeEyebrow');
+    const statusEl = document.getElementById('challengeStatus');
+    const sub = document.getElementById('challengeSub');
+    el.classList.remove('in-progress', 'success', 'failed');
+    void el.offsetWidth;
+
+    if(status === 'success'){
+      eyebrow.textContent = 'Challenge Complete';
+      statusEl.textContent = 'Challenge Successful';
+      sub.textContent = 'Call overturned';
+      el.classList.add('success');
+    } else if(status === 'failed'){
+      eyebrow.textContent = 'Challenge Complete';
+      statusEl.textContent = 'Challenge Failed';
+      sub.textContent = 'Call stands';
+      el.classList.add('failed');
+    } else {
+      eyebrow.textContent = "Coach's Challenge";
+      statusEl.textContent = 'Challenge In Progress';
+      sub.textContent = 'Review underway';
+      el.classList.add('in-progress');
+    }
+  }
+
   let latestState = null;
   setInterval(() => { if(latestState){ renderTimer(latestState); } }, 250);
 
@@ -901,6 +984,7 @@
       if(data.type === 'EVENT' && data.event.type === 'SCORE'){ flashGoal(data.event.side, data.event.delta); }
       if(data.type === 'EVENT' && data.event.type === 'COMMENTATOR_BUG'){ flashBug('commentatorBug'); }
       if(data.type === 'EVENT' && data.event.type === 'GUEST_BUG'){ flashBug('guestBug'); }
+      if(data.type === 'EVENT' && data.event.type === 'CHALLENGE'){ showChallenge(data.event.status); }
     };
   }
   connect();

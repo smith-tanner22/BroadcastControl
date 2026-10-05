@@ -10,6 +10,19 @@ const wss = new WebSocketServer({ server });
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+const VOLLEYBALL_BETWEEN_SETS_SECONDS = 180;
+const VOLLEYBALL_TIMEOUT_SECONDS = 75;
+
+// Fallback timer length when a non-volleyball intermission scene is cut to.
+// Volleyball is explicit: Set Break is always 3:00, Timeout is always 1:15.
+const DEFAULT_INTERMISSION_SECONDS = {
+  soccer: 900,
+  basketball: 900,
+  volleyball: VOLLEYBALL_TIMEOUT_SECONDS,
+  baseball: 900,
+  softball: 900
+};
+
 // ---------------------------------------------------------------------------
 // Shared state — single source of truth for every connected overlay/control page.
 // All sports' fields live side by side in one object (instead of being wiped
@@ -17,7 +30,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ---------------------------------------------------------------------------
 const DEFAULT_STATE = {
   sport: 'soccer', // soccer | basketball | volleyball | baseball | softball
-  mode: 'scorebug', // off | scorebug | matchup | halftime | break
+  mode: 'scorebug', // off | scorebug | matchup | halftime | timeout | water | final
   // EAC is always the home side, so its identity is baked in as the default
   // here instead of being typed into the control panel every gameday.
   home: 'EAC',
@@ -70,14 +83,6 @@ const DEFAULT_STATE = {
   strikes: 0,
   bases: { first: false, second: false, third: false },
 
-  // Break screen
-  breakMode: 'brb', // timeout | brb | sponsor
-  breakTitle: "We'll Be Right Back",
-  sponsor: 'Sponsor Name',
-  sponsorTag: 'Thanks for supporting local sports',
-  footer: 'LIVE COVERAGE',
-  qr: '',
-
   // Guest bug — persisted so the operator types it once and can re-trigger
   // the on-air pulse repeatedly without retyping. The commentator bug is
   // hardcoded client-side and needs no state.
@@ -86,16 +91,19 @@ const DEFAULT_STATE = {
 
   // Halftime/intermission countdown, same fixed-end-time trick as the clock.
   halftimeEndsAt: null, // epoch ms
-  // Which timer preset is currently armed (e.g. 180 for volleyball's 3:00
-  // between-sets break, or 75 for a 1:15 timeout). Tapping the halftime/
-  // "Set Break" live-scene button (re)starts halftimeEndsAt from this value,
-  // so a single tap both cuts to the break scene and starts its countdown.
+  // Last manually selected/custom intermission duration. Volleyball scene
+  // buttons ignore this and start their fixed timers directly.
   intermissionSelectedSeconds: null,
 
   // Scorebug position/size on the overlay canvas, adjustable via the overlay
   // page's own edit mode. x/y are pixel offsets from the default centered
   // position; scale is a uniform multiplier. {0,0,1} reproduces the default.
   scoreFlashPosition: 'bottom',
+  homeScoreFlashColor: '#D4AF37',
+  homeScoreFlashOutline: '#000000',
+  awayScoreFlashColor: '#D4AF37',
+  awayScoreFlashOutline: '#000000',
+  challengeBugLayout: { x: 0, y: 0 },
   scorebugLayout: { x: 0, y: 0, scale: 1 },
   // Sport-specific default positions for the scorebug — saved separately per
   // sport so switching doesn't lose the customized position for that sport.
@@ -105,6 +113,13 @@ const DEFAULT_STATE = {
     volleyball: { x: 0, y: 0, scale: 1 },
     baseball: { x: 0, y: 0, scale: 1 },
     softball: { x: 0, y: 0, scale: 1 }
+  },
+  challengeBugLayouts: {
+    soccer: { x: 0, y: 0 },
+    basketball: { x: 0, y: 0 },
+    volleyball: { x: 0, y: 0 },
+    baseball: { x: 0, y: 0 },
+    softball: { x: 0, y: 0 }
   }
 };
 
@@ -114,32 +129,47 @@ const DATA_DIR = path.join(__dirname, 'data');
 const STATE_FILE = path.join(DATA_DIR, 'state.json');
 let saveTimer = null;
 
+function normalizeStateShape(s) {
+  if (s.mode === 'break') s.mode = 'scorebug';
+  ['breakMode', 'breakTitle', 'sponsor', 'sponsorTag', 'footer', 'qr'].forEach((key) => {
+    delete s[key];
+  });
+  const sports = ['soccer', 'basketball', 'volleyball', 'baseball', 'softball'];
+  if (!s.scorebugLayouts) s.scorebugLayouts = {};
+  if (!s.challengeBugLayouts) s.challengeBugLayouts = {};
+  sports.forEach((sport) => {
+    s.scorebugLayouts[sport] = Object.assign({ x: 0, y: 0, scale: 1 }, s.scorebugLayouts[sport] || {});
+    s.challengeBugLayouts[sport] = Object.assign({ x: 0, y: 0 }, s.challengeBugLayouts[sport] || {});
+  });
+  s.challengeBugLayout = Object.assign({ x: 0, y: 0 }, s.challengeBugLayout || {});
+  if (!Number.isFinite(Number(s.intermissionSelectedSeconds)) || Number(s.intermissionSelectedSeconds) <= 0) {
+    s.intermissionSelectedSeconds = DEFAULT_INTERMISSION_SECONDS[s.sport] || 900;
+  } else {
+    s.intermissionSelectedSeconds = Math.max(1, Math.round(Number(s.intermissionSelectedSeconds)));
+  }
+  return s;
+}
+
 function loadState() {
   const base = JSON.parse(JSON.stringify(DEFAULT_STATE));
   try {
     fs.mkdirSync(DATA_DIR, { recursive: true });
   } catch (e) {
     console.error('Could not create data directory, starting with defaults:', e);
-    return base;
+    return normalizeStateShape(base);
   }
   try {
     const raw = fs.readFileSync(STATE_FILE, 'utf8');
     const loaded = JSON.parse(raw);
     const merged = Object.assign(base, loaded);
-    return merged;
+    return normalizeStateShape(merged);
   } catch (e) {
     console.warn('No valid saved state found, starting with defaults:', e.message);
-    return base;
+    return normalizeStateShape(base);
   }
 }
 
 let state = loadState();
-
-// Fallback timer length when the halftime/"Set Break" scene is cut to
-// without an explicit preset armed first (e.g. right after switching sport).
-const DEFAULT_INTERMISSION_SECONDS = {
-  soccer: 900, basketball: 900, volleyball: 180, baseball: 900, softball: 900
-};
 
 function scheduleSave() {
   if (saveTimer) return;
@@ -181,6 +211,44 @@ function endHalfInning() {
   }
 }
 
+function volleyballSetTarget(setNum) {
+  return setNum >= 5 ? 15 : 25;
+}
+
+function volleyballCurrentSetWinner(homeScore, awayScore, setNum) {
+  const target = volleyballSetTarget(setNum);
+  if (homeScore >= target && homeScore - awayScore >= 2) return 'home';
+  if (awayScore >= target && awayScore - homeScore >= 2) return 'away';
+  return null;
+}
+
+function volleyballSetPointSideForScores(homeScore, awayScore, setNum) {
+  if (volleyballCurrentSetWinner(homeScore, awayScore, setNum)) return null;
+  const target = volleyballSetTarget(setNum);
+  if (homeScore >= target - 1 && homeScore - awayScore >= 1) return 'home';
+  if (awayScore >= target - 1 && awayScore - homeScore >= 1) return 'away';
+  return null;
+}
+
+function volleyballMatchClincher() {
+  if (state.setsWon.home >= 3 || state.setsWon.away >= 3) return null;
+
+  const setNum = state.volleyballSet;
+  const currentWinner = volleyballCurrentSetWinner(state.homeScore, state.awayScore, setNum);
+  if (currentWinner && state.setsWon[currentWinner] >= 2) {
+    return { side: currentWinner, finalHome: state.homeScore, finalAway: state.awayScore };
+  }
+
+  const setPointSide = volleyballSetPointSideForScores(state.homeScore, state.awayScore, setNum);
+  if (!setPointSide || state.setsWon[setPointSide] < 2) return null;
+
+  return {
+    side: setPointSide,
+    finalHome: state.homeScore + (setPointSide === 'home' ? 1 : 0),
+    finalAway: state.awayScore + (setPointSide === 'away' ? 1 : 0)
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Action reducer — every control-panel button press sends one of these.
 // ---------------------------------------------------------------------------
@@ -189,20 +257,24 @@ function applyAction(action) {
     case 'SET_SPORT':
       state.sport = action.sport;
       // Load the sport-specific scorebug layout, or default if not set
-      if (state.scorebugLayouts && state.scorebugLayouts[action.sport]) {
-        state.scorebugLayout = Object.assign({}, state.scorebugLayouts[action.sport]);
-      }
-      break;
+	      if (state.scorebugLayouts && state.scorebugLayouts[action.sport]) {
+	        state.scorebugLayout = Object.assign({}, state.scorebugLayouts[action.sport]);
+	      }
+	      if (state.challengeBugLayouts && state.challengeBugLayouts[action.sport]) {
+	        state.challengeBugLayout = Object.assign({}, state.challengeBugLayouts[action.sport]);
+	      }
+	      break;
 
     case 'SET_MODE':
-      state.mode = action.mode;
-      // Cutting to the halftime/"Set Break" scene (or volleyball's
-      // "Timeout" scene, which shares the same countdown) (re)starts it
-      // from whatever preset is armed, every time — so the operator never
-      // has to separately start a timer, and re-tapping the scene button
-      // (e.g. for the next set's break) always resets the clock.
+      state.mode = action.mode === 'break' ? 'scorebug' : action.mode;
+      // Cutting to an intermission scene starts the clock automatically.
+      // Volleyball is intentionally simple: Set Break is always 3:00 and
+      // Timeout is always 1:15, with no preset arming in between.
       if (action.mode === 'halftime' || action.mode === 'timeout') {
-        const seconds = state.intermissionSelectedSeconds || DEFAULT_INTERMISSION_SECONDS[state.sport] || 900;
+        let seconds = DEFAULT_INTERMISSION_SECONDS[state.sport] || 900;
+        if (state.sport === 'volleyball') {
+          seconds = action.mode === 'timeout' ? VOLLEYBALL_TIMEOUT_SECONDS : VOLLEYBALL_BETWEEN_SETS_SECONDS;
+        }
         state.intermissionSelectedSeconds = seconds;
         state.halftimeEndsAt = Date.now() + seconds * 1000;
       }
@@ -211,7 +283,11 @@ function applyAction(action) {
     case 'SCORE_DELTA': {
       const key = action.side === 'home' ? 'homeScore' : 'awayScore';
       state[key] = Math.max(0, state[key] + action.delta);
-      if (action.delta > 0) broadcastEvent({ type: 'SCORE', side: action.side, delta: action.delta });
+      if (action.delta > 0) {
+        broadcastState();
+        broadcastEvent({ type: 'SCORE', side: action.side, delta: action.delta });
+        return;
+      }
       break;
     }
 
@@ -252,6 +328,7 @@ function applyAction(action) {
         state.setsWon = { home: 0, away: 0 };
         state.servingSide = 'home';
         state.volleyballSetScores = {};
+        state.halftimeEndsAt = null;
       } else if (sport === 'baseball' || sport === 'softball') {
         state.inning = 1;
         state.inningHalf = 'Top';
@@ -269,21 +346,20 @@ function applyAction(action) {
 
     case 'START_HALFTIME_TIMER':
       state.halftimeEndsAt = Date.now() + action.seconds * 1000;
-      // Keep the preset highlight in sync: a custom duration shouldn't leave
-      // a stale preset button lit up as if it were the one running.
+      // Remember the latest custom duration for non-volleyball intermission
+      // scenes. Volleyball's Set Break/Timeout buttons override this.
       state.intermissionSelectedSeconds = Math.max(1, Math.round(action.seconds));
       break;
 
     case 'SELECT_INTERMISSION_TIMER':
       state.intermissionSelectedSeconds = Math.max(1, Math.round(action.seconds));
-      // If the break scene is already live, switching presets should restart
-      // the on-air countdown right away rather than waiting for another tap.
+      // Compatibility for older control pages that still send preset picks.
       if (state.mode === 'halftime' || state.mode === 'timeout') {
         state.halftimeEndsAt = Date.now() + state.intermissionSelectedSeconds * 1000;
       }
       break;
 
-    // Explicit stop for the operator's "Start"/"Stop" timer controls —
+    // Explicit stop for the operator's timer controls —
     // separate from cutting away from the scene, since the countdown should
     // be pauseable without also having to leave Set Break/Timeout on air.
     case 'STOP_HALFTIME_TIMER':
@@ -328,6 +404,18 @@ function applyAction(action) {
       state.homeScore = 0;
       state.awayScore = 0;
       state.volleyballSet = Math.min(5, state.volleyballSet + 1);
+      break;
+    }
+
+    case 'VOLLEYBALL_END_MATCH': {
+      const clincher = volleyballMatchClincher();
+      if (!clincher) break;
+
+      const setNum = state.volleyballSet;
+      state.homeScore = clincher.finalHome;
+      state.awayScore = clincher.finalAway;
+      state.volleyballSetScores[setNum] = { home: state.homeScore, away: state.awayScore };
+      state.setsWon[clincher.side] = Math.max(state.setsWon[clincher.side], 3);
       break;
     }
 
@@ -394,35 +482,51 @@ function applyAction(action) {
       state.scorebugLayout = { x: action.x, y: action.y, scale: action.scale };
       break;
 
-    case 'SAVE_SCOREBUG_LAYOUT_FOR_SPORT': {
-      const sport = action.sport || state.sport;
-      if (!state.scorebugLayouts) state.scorebugLayouts = {};
-      state.scorebugLayouts[sport] = { x: action.x, y: action.y, scale: action.scale };
-      state.scorebugLayout = { x: action.x, y: action.y, scale: action.scale };
-      break;
-    }
+	    case 'SAVE_SCOREBUG_LAYOUT_FOR_SPORT': {
+	      const sport = action.sport || state.sport;
+	      if (!state.scorebugLayouts) state.scorebugLayouts = {};
+	      if (!state.challengeBugLayouts) state.challengeBugLayouts = {};
+	      const challengeX = Number.isFinite(action.challengeX) ? action.challengeX : state.challengeBugLayout.x;
+	      const challengeY = Number.isFinite(action.challengeY) ? action.challengeY : state.challengeBugLayout.y;
+	      state.scorebugLayouts[sport] = { x: action.x, y: action.y, scale: action.scale };
+	      state.scorebugLayout = { x: action.x, y: action.y, scale: action.scale };
+	      state.challengeBugLayouts[sport] = { x: challengeX, y: challengeY };
+	      state.challengeBugLayout = { x: challengeX, y: challengeY };
+	      break;
+	    }
 
     case 'RESET_SCOREBUG_LAYOUT':
       state.scorebugLayout = { x: 0, y: 0, scale: 1 };
       break;
 
-    case 'RESET_SCOREBUG_LAYOUT_FOR_SPORT': {
-      const sport = action.sport || state.sport;
-      if (!state.scorebugLayouts) state.scorebugLayouts = {};
-      state.scorebugLayouts[sport] = { x: 0, y: 0, scale: 1 };
-      state.scorebugLayout = { x: 0, y: 0, scale: 1 };
+	    case 'RESET_SCOREBUG_LAYOUT_FOR_SPORT': {
+	      const sport = action.sport || state.sport;
+	      if (!state.scorebugLayouts) state.scorebugLayouts = {};
+	      if (!state.challengeBugLayouts) state.challengeBugLayouts = {};
+	      state.scorebugLayouts[sport] = { x: 0, y: 0, scale: 1 };
+	      state.scorebugLayout = { x: 0, y: 0, scale: 1 };
+	      state.challengeBugLayouts[sport] = { x: 0, y: 0 };
+	      state.challengeBugLayout = { x: 0, y: 0 };
+	      break;
+	    }
+
+    case 'SET_CHALLENGE_BUG_LAYOUT':
+      state.challengeBugLayout = { x: action.x, y: action.y };
       break;
-    }
+
+    case 'RESET_CHALLENGE_BUG_LAYOUT':
+      state.challengeBugLayout = { x: 0, y: 0 };
+      break;
 
     case 'SET_SCORE_FLASH_POSITION':
       state.scoreFlashPosition = action.position === 'bottom' ? 'bottom' : 'top';
       break;
 
-    case 'UPDATE_TEAMS':
+    case 'UPDATE_SCORE_FLASH_STYLE':
       Object.assign(state, action.data);
       break;
 
-    case 'UPDATE_BREAK':
+    case 'UPDATE_TEAMS':
       Object.assign(state, action.data);
       break;
 
@@ -439,6 +543,18 @@ function applyAction(action) {
 
     case 'SHOW_GUEST_BUG':
       broadcastEvent({ type: 'GUEST_BUG' });
+      return;
+
+    case 'SHOW_CHALLENGE_IN_PROGRESS':
+      broadcastEvent({ type: 'CHALLENGE', status: 'progress' });
+      return;
+
+    case 'SHOW_CHALLENGE_SUCCESS':
+      broadcastEvent({ type: 'CHALLENGE', status: 'success' });
+      return;
+
+    case 'SHOW_CHALLENGE_FAILED':
+      broadcastEvent({ type: 'CHALLENGE', status: 'failed' });
       return;
 
     default:

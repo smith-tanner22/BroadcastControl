@@ -18,7 +18,7 @@ This starts a server on port 3000 (override with `PORT=8080 npm start`) serving:
 
 - `http://<host>:3000/overlay.html` — put this URL into YoloBox Extreme's
   **Web URL Overlay** source. This is the one single overlay page — it shows
-  scorebug / matchup / halftime / break based on server state, nothing else
+  scorebug / matchup / halftime / timeout / water break / final based on server state, nothing else
   to add.
 - `http://<host>:3000/control.html` — open this on your phone or tablet during
   the game. Tap a scene button, bump the score, and it updates the overlay
@@ -62,19 +62,19 @@ buttons instead of (or alongside) the touch control panel.
 ## What's editable live
 
 - **Sport**: soccer, basketball, volleyball, baseball, softball (each sport remembers its own scorebug position)
-- **Scene**: off / scorebug / matchup / halftime / break (defaults to scorebug on startup)
+- **Scene**: off / scorebug / matchup / halftime / timeout / water break / final (defaults to scorebug on startup)
 - **Score, period/half/quarter/set label**. Soccer and basketball have no game clock — the scorebug always
   shows the two team panels flush together with a half/quarter strip underneath.
-- **Halftime/intermission countdown** with sport-specific presets
-- **Scorebug layout & positioning**: adjustable per-sport — save custom positions as defaults for each sport
-- **Score flash animation**: toggle between top and bottom position (defaults to bottom)
+- **Halftime/intermission countdown** with sport-specific behavior. For volleyball, Set Break starts 3:00 and Timeout starts 1:15 automatically.
+- **Scorebug layout & positioning**: adjustable per-sport, with a draggable challenge-bug position control
+- **Score flash animation**: toggle between top and bottom position (defaults to bottom), with editable home/away fill and outline colors
 - **Team names, colors, league/event text, kickoff/tip-off time**
 - **Sport-specific stats**:
   - Soccer: half (1st/2nd)
   - Basketball: quarter, fouls, timeouts
-  - Volleyball: sets, serving side, box score per set
+  - Volleyball: sets, serving side, box score per set, and a match-ending button when a team with 2 sets won is at match point
   - Baseball/Softball: inning, count (balls/strikes/outs), baserunners
-- **Break screen**: type (timeout/BRB/sponsor), title, sponsor name + tagline, footer text, QR code image URL
+- **On-air bugs**: commentator/guest lower-third bugs and basketball/volleyball challenge review bug
 
 ## Home team (EAC) and the opponent roster
 

@@ -22,7 +22,7 @@ This starts a server on port 3000 (override with `PORT=8080 npm start`) serving:
 
 - `http://<host>:3000/overlay.html` — put this URL into YoloBox Extreme's
   **Web URL Overlay** source. This is the one single overlay page — it shows
-  scorebug / matchup / halftime / break based on server state, nothing else
+  scorebug / matchup / halftime / timeout / water break / final based on server state, nothing else
   to add.
 - `http://<host>:3000/control.html` — open this on your phone or tablet during
   the game. Tap a scene button, bump the score, and it updates the overlay
@@ -71,9 +71,9 @@ buttons instead of (or alongside) the touch control panel.
 
 ## What's editable live
 
-- Scene: off / scorebug / matchup / halftime / break
+- Scene: off / scorebug / matchup / halftime / timeout / water break / final
 - Score, clock text, half label
-- Halftime countdown (15:00 / 10:00 / 5:00 presets)
+- Halftime/intermission countdown with sport-specific behavior. For volleyball, Set Break starts 3:00 and Timeout starts 1:15 automatically, and match point can trigger a final-match button.
+- Scorebug position and score flash fill/outline colors
 - Team names, colors, records, league/event text, kickoff time
-- Break screen: type (timeout/BRB/sponsor), title, sponsor name + tagline,
-  footer text, QR code image URL
+- On-air bugs: commentator/guest lower-thirds and basketball/volleyball challenge review
