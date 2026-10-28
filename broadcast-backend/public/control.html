@@ -650,13 +650,23 @@
 <details class="pri-team-setup">
   <summary>Team Setup</summary>
   <div class="details-body">
-    <div class="field">
-      <label>Away Opponent</label>
-      <select id="awayTeamSelect">
-        <option value="">— Select opponent —</option>
-        <option value="__custom__">Custom / Other…</option>
-      </select>
+    <div class="row2">
+      <div class="field">
+        <label>Home Team</label>
+        <select id="homeTeamSelect">
+          <option value="">— Select home team —</option>
+          <option value="__custom__">Custom / Other…</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Away Team</label>
+        <select id="awayTeamSelect">
+          <option value="">— Select away team —</option>
+          <option value="__custom__">Custom / Other…</option>
+        </select>
+      </div>
     </div>
+    <button class="preset-btn" id="swapTeamsBtn" type="button" style="width:100%;margin-bottom:12px;">⇄ Swap Home / Away</button>
     <div class="row2">
       <div class="field"><label>Home Abbreviation</label><input type="text" id="homeName"></div>
       <div class="field"><label>Away Abbreviation</label><input type="text" id="awayName"></div>
@@ -691,10 +701,10 @@
         </div>
       </div>
     </div>
-    <!-- Home logo is permanently EAC's crest; away logo comes from the roster
-         pick (teams.json) or stays blank for a Custom opponent — neither is
-         ever hand-typed, so there's no visible field, just a value carried
-         through to the save payload. -->
+    <!-- Both logos come from the roster pick (teams.json) or stay blank for a
+         Custom team — neither is ever hand-typed, so there's no visible
+         field, just a value carried through to the save payload. -->
+    <input type="hidden" id="homeLogo" value="">
     <input type="hidden" id="awayLogo" value="">
     <div class="row2">
       <div class="field"><label>Home Logo Background</label>
@@ -992,24 +1002,25 @@
     document.getElementById('baseSecond').classList.toggle('on', s.bases.second);
     document.getElementById('baseThird').classList.toggle('on', s.bases.third);
 
-    document.getElementById('homeColorPreview').style.background = s.homeColor;
-    document.getElementById('awayColorPreview').style.background = s.awayColor;
-    markSelectedSwatch('homePalette', s.homeColor);
-    markSelectedSwatch('awayPalette', s.awayColor);
-    syncShadeControls('home', s.homeColor);
-    syncShadeControls('away', s.awayColor);
-    syncAwayTeamSelect(s);
+    // A side with an unsaved roster pick / swap keeps what's in the form
+    // instead of being snapped back to the saved state by the next broadcast.
+    ['home', 'away'].forEach(side => {
+      if(teamPickDirty[side]) return;
+      const color = side === 'home' ? s.homeColor : s.awayColor;
+      document.getElementById(side + 'ColorPreview').style.background = color;
+      markSelectedSwatch(side + 'Palette', color);
+      syncShadeControls(side, color);
+      syncTeamSelect(side, s);
+
+      // only fill the setup forms once per field (don't fight the operator mid-typing)
+      if(document.activeElement.id !== side + 'Name') document.getElementById(side + 'Name').value = s[side];
+      if(document.activeElement.id !== side + 'FullName') document.getElementById(side + 'FullName').value = s[side + 'FullName'] || '';
+      if(document.activeElement.id !== side + 'Color') document.getElementById(side + 'Color').value = color;
+      document.getElementById(side + 'Logo').value = s[side + 'Logo'] || '';
+    });
 
     syncLogoBgButtons(s);
 
-    // only fill the setup forms once per field (don't fight the operator mid-typing)
-    if(document.activeElement.id !== 'homeName') document.getElementById('homeName').value = s.home;
-    if(document.activeElement.id !== 'awayName') document.getElementById('awayName').value = s.away;
-    if(document.activeElement.id !== 'homeFullName') document.getElementById('homeFullName').value = s.homeFullName || '';
-    if(document.activeElement.id !== 'awayFullName') document.getElementById('awayFullName').value = s.awayFullName || '';
-    if(document.activeElement.id !== 'homeColor') document.getElementById('homeColor').value = s.homeColor;
-    if(document.activeElement.id !== 'awayColor') document.getElementById('awayColor').value = s.awayColor;
-    document.getElementById('awayLogo').value = s.awayLogo || '';
     if(document.activeElement.id !== 'league') document.getElementById('league').value = s.league;
     if(document.activeElement.id !== 'division') document.getElementById('division').value = s.division || '';
     if(document.activeElement.id !== 'event') document.getElementById('event').value = s.event;
@@ -1067,6 +1078,9 @@
   // pick before it's saved (buttons have no "activeElement" to check like
   // text inputs do, so this flag stands in for that).
   const logoBgDirty = { home: false, away: false };
+  // Same idea for team identity (name/full name/color/logo) after a roster
+  // pick or a home/away swap — held until Save Team Info is clicked.
+  const teamPickDirty = { home: false, away: false };
   function syncLogoBgButtons(s){
     ['home', 'away'].forEach(side => {
       if(logoBgDirty[side]) return;
@@ -1151,9 +1165,9 @@
     btn.addEventListener('click', () => send({ type: 'TOGGLE_BASE', base: btn.dataset.base }));
   });
 
-  // EAC only ever wears its own colors, so the home swatches are just those
-  // — including the pink used for breast cancer awareness games — instead
-  // of the full opponent-oriented palette.
+  // EAC's own colors — including the pink used for breast cancer awareness
+  // games. The home color picker leads with these, then the full palette
+  // (see HOME_TEAM_COLOR_PALETTE) for games where EAC isn't the home side.
   const HOME_COLOR_PALETTE = [
     '#4B1E78', // Purple (default)
     '#D4AF37', // Gold
@@ -1260,7 +1274,10 @@
       btn.classList.toggle('selected', btn.dataset.hex.toLowerCase() === (hex || '').toLowerCase());
     });
   }
-  buildPalette('homePalette', 'homeColor', 'homeColorPreview', 'home', HOME_COLOR_PALETTE);
+  const HOME_TEAM_COLOR_PALETTE = HOME_COLOR_PALETTE.concat(
+    AWAY_COLOR_PALETTE.filter(c => !HOME_COLOR_PALETTE.includes(c))
+  );
+  buildPalette('homePalette', 'homeColor', 'homeColorPreview', 'home', HOME_TEAM_COLOR_PALETTE);
   buildPalette('awayPalette', 'awayColor', 'awayColorPreview', 'away', AWAY_COLOR_PALETTE);
   buildPalette('homeScoreFlashColorPalette', 'homeScoreFlashColor', 'homeScoreFlashColorPreview', null, HOME_COLOR_PALETTE);
   buildPalette('awayScoreFlashColorPalette', 'awayScoreFlashColor', 'awayScoreFlashColorPreview', null, AWAY_COLOR_PALETTE);
@@ -1286,18 +1303,22 @@
   wireShadeSlider('home', 'homeColor', 'homeColorPreview', 'homePalette');
   wireShadeSlider('away', 'awayColor', 'awayColorPreview', 'awayPalette');
 
-  // Opponent roster — edit /teams.json to add/change teams, no code changes needed.
-  let AWAY_TEAMS = [];
+  // Team roster — edit /teams.json to add/change teams, no code changes needed.
+  // Same list feeds both the Home and Away pickers, since EAC isn't always
+  // the home side (or playing at all).
+  let TEAMS = [];
   fetch('/teams.json').then(r => r.json()).then(teams => {
-    AWAY_TEAMS = teams;
-    const sel = document.getElementById('awayTeamSelect');
-    teams.forEach(t => {
-      const opt = document.createElement('option');
-      opt.value = t.abbr;
-      opt.textContent = t.name;
-      sel.appendChild(opt);
+    TEAMS = teams;
+    ['home', 'away'].forEach(side => {
+      const sel = document.getElementById(side + 'TeamSelect');
+      teams.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.abbr;
+        opt.textContent = t.name;
+        sel.appendChild(opt);
+      });
+      if(latestState && !teamPickDirty[side]) syncTeamSelect(side, latestState);
     });
-    if(latestState) syncAwayTeamSelect(latestState);
   }).catch(() => {});
 
   // Name/full name stay tied to the roster pick (edit teams.json if they're
@@ -1305,36 +1326,73 @@
   // color is always left editable — a one-off shade tweak for a given game
   // shouldn't require dropping to "Custom / Other…" and losing the roster
   // link.
-  function setAwayFieldsLocked(locked){
-    ['awayName', 'awayFullName'].forEach(id => {
+  function setTeamFieldsLocked(side, locked){
+    [side + 'Name', side + 'FullName'].forEach(id => {
       document.getElementById(id).toggleAttribute('readonly', locked);
     });
   }
 
-  function syncAwayTeamSelect(s){
-    const sel = document.getElementById('awayTeamSelect');
+  function syncTeamSelect(side, s){
+    const sel = document.getElementById(side + 'TeamSelect');
     if(document.activeElement === sel) return;
-    const match = AWAY_TEAMS.find(t => t.abbr === s.away);
+    const match = TEAMS.find(t => t.abbr === s[side]);
     sel.value = match ? match.abbr : '__custom__';
-    setAwayFieldsLocked(!!match);
+    setTeamFieldsLocked(side, !!match);
   }
 
-  document.getElementById('awayTeamSelect').addEventListener('change', (e) => {
-    const val = e.target.value;
-    if(val === '__custom__' || val === ''){
-      setAwayFieldsLocked(false);
-      return;
-    }
-    const team = AWAY_TEAMS.find(t => t.abbr === val);
-    if(!team) return;
-    document.getElementById('awayName').value = team.abbr;
-    document.getElementById('awayFullName').value = team.name;
-    document.getElementById('awayColor').value = team.color;
-    document.getElementById('awayColorPreview').style.background = team.color;
-    markSelectedSwatch('awayPalette', team.color);
-    syncShadeControls('away', team.color);
-    document.getElementById('awayLogo').value = team.logo || '';
-    setAwayFieldsLocked(true);
+  function applyTeamColor(side, color){
+    document.getElementById(side + 'Color').value = color;
+    document.getElementById(side + 'ColorPreview').style.background = color;
+    markSelectedSwatch(side + 'Palette', color);
+    syncShadeControls(side, color);
+  }
+
+  ['home', 'away'].forEach(side => {
+    document.getElementById(side + 'TeamSelect').addEventListener('change', (e) => {
+      const val = e.target.value;
+      teamPickDirty[side] = true;
+      if(val === '__custom__' || val === ''){
+        setTeamFieldsLocked(side, false);
+        return;
+      }
+      const team = TEAMS.find(t => t.abbr === val);
+      if(!team) return;
+      document.getElementById(side + 'Name').value = team.abbr;
+      document.getElementById(side + 'FullName').value = team.name;
+      applyTeamColor(side, team.color);
+      document.getElementById(side + 'Logo').value = team.logo || '';
+      setTeamFieldsLocked(side, true);
+    });
+  });
+
+  // Swaps everything in the form between the two sides (still needs Save
+  // Team Info to go on air, same as a roster pick).
+  document.getElementById('swapTeamsBtn').addEventListener('click', () => {
+    const read = side => ({
+      select: document.getElementById(side + 'TeamSelect').value,
+      name: document.getElementById(side + 'Name').value,
+      fullName: document.getElementById(side + 'FullName').value,
+      color: document.getElementById(side + 'Color').value,
+      logo: document.getElementById(side + 'Logo').value,
+      logoBg: document.getElementById(side + 'LogoBg').value
+    });
+    const home = read('home');
+    const away = read('away');
+    [['home', away], ['away', home]].forEach(([side, v]) => {
+      document.getElementById(side + 'TeamSelect').value = v.select;
+      document.getElementById(side + 'Name').value = v.name;
+      document.getElementById(side + 'FullName').value = v.fullName;
+      applyTeamColor(side, v.color);
+      document.getElementById(side + 'Logo').value = v.logo;
+      document.getElementById(side + 'LogoBg').value = v.logoBg;
+      document.querySelectorAll('.logo-bg-btn[data-side="' + side + '"]').forEach(b => {
+        b.classList.toggle('active', b.dataset.bg.toLowerCase() === v.logoBg.toLowerCase());
+      });
+      setTeamFieldsLocked(side, !!TEAMS.find(t => t.abbr === v.select));
+      teamPickDirty[side] = true;
+      logoBgDirty[side] = true;
+    });
+    document.getElementById('homeTeamSelect').dispatchEvent(new Event('input'));
   });
   document.getElementById('homeColor').addEventListener('input', (e) => {
     document.getElementById('homeColorPreview').style.background = e.target.value;
@@ -1382,7 +1440,7 @@
   const markTeamsSaved = makeSaveFeedback(document.getElementById('saveTeams'), [
     'homeName', 'awayName', 'homeFullName', 'awayFullName', 'homeColor', 'awayColor',
     'homeLogoBg', 'awayLogoBg',
-    'league', 'division', 'event', 'kickoff', 'awayTeamSelect'
+    'league', 'division', 'event', 'kickoff', 'homeTeamSelect', 'awayTeamSelect'
   ]);
   const markGuestSaved = makeSaveFeedback(document.getElementById('saveGuest'), [
     'guestName', 'guestTitle'
@@ -1414,6 +1472,7 @@
         awayFullName: document.getElementById('awayFullName').value,
         homeColor: document.getElementById('homeColor').value,
         awayColor: document.getElementById('awayColor').value,
+        homeLogo: document.getElementById('homeLogo').value,
         awayLogo: document.getElementById('awayLogo').value,
         homeLogoBg: document.getElementById('homeLogoBg').value,
         awayLogoBg: document.getElementById('awayLogoBg').value,
@@ -1425,6 +1484,8 @@
     });
     logoBgDirty.home = false;
     logoBgDirty.away = false;
+    teamPickDirty.home = false;
+    teamPickDirty.away = false;
     markTeamsSaved();
   });
 

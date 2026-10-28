@@ -31,8 +31,8 @@ const DEFAULT_INTERMISSION_SECONDS = {
 const DEFAULT_STATE = {
   sport: 'soccer', // soccer | basketball | volleyball | baseball | softball
   mode: 'scorebug', // off | scorebug | matchup | halftime | timeout | water | final
-  // EAC is always the home side, so its identity is baked in as the default
-  // here instead of being typed into the control panel every gameday.
+  // EAC is usually the home side, so its identity is the default here. Either
+  // side can be set to any team from teams.json in the control panel.
   home: 'EAC',
   away: 'AWAY',
   // Full names shown as small text under the big abbreviation in the
@@ -306,16 +306,28 @@ function applyAction(action) {
       state.homeScore = 0;
       state.awayScore = 0;
 
-      // Back-to-back games usually mean a new opponent — reset the away
-      // side's identity to the blank defaults so the previous opponent's
-      // name/logo/color doesn't carry over. Home (always EAC) is left
-      // alone: it's the broadcast's own fixed identity, not opponent-
-      // dependent, so there's nothing to reset there.
-      state.away = 'AWAY';
-      state.awayFullName = '';
-      state.awayColor = '#B3232E';
-      state.awayLogo = '';
-      state.awayLogoBg = '#FFFFFF';
+      // Back-to-back games usually mean a new opponent — reset the
+      // non-EAC side's identity to the blank defaults so the previous
+      // opponent's name/logo/color doesn't carry over. Whichever side EAC
+      // is on is left alone; if EAC wasn't playing at all, home goes back
+      // to the EAC defaults.
+      const blankSide = (side) => {
+        state[side] = side === 'home' ? 'HOME' : 'AWAY';
+        state[side + 'FullName'] = '';
+        state[side + 'Color'] = '#B3232E';
+        state[side + 'Logo'] = '';
+        state[side + 'LogoBg'] = '#FFFFFF';
+      };
+      if (state.away === DEFAULT_STATE.home) {
+        blankSide('home');
+      } else {
+        if (state.home !== DEFAULT_STATE.home) {
+          ['', 'FullName', 'Color', 'Logo', 'LogoBg'].forEach((k) => {
+            state['home' + k] = DEFAULT_STATE['home' + k];
+          });
+        }
+        blankSide('away');
+      }
 
       if (sport === 'soccer') {
         state.half = '1st Half';

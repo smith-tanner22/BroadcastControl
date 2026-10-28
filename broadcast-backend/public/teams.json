@@ -11,6 +11,7 @@
   { "name": "College of Southern Nevada", "abbr": "CSN", "color": "#8E44AD", "logo": "/logos/collegeofsourthernnevada.png" },
   { "name": "Colorado Northwestern Community College", "abbr": "CNCC", "color": "#B01E23", "logo": "/logos/coloradonorthwesterncommunitycollege.webp" },
   { "name": "Community Christian College", "abbr": "CCC", "color": "#A89048", "logo": "/logos/communitychristiancollege.webp" },
+  { "name": "Eastern Arizona College", "abbr": "EAC", "color": "#4B1E78", "logo": "/logos/eac.png" },
   { "name": "Gillette College", "abbr": "GILLETTE", "color": "#1A1A1A", "logo": "/logos/gillettecollege.webp" },
   { "name": "Glendale Community College", "abbr": "GCC", "color": "#E67E22", "logo": "/logos/glendalecommunitycollege.webp" },
   { "name": "IRISH Football Club", "abbr": "IRISH", "color": "#2E8B3D", "logo": "" },
