@@ -98,6 +98,13 @@
 	    color:rgba(255,255,255,0.55);text-transform:uppercase;white-space:nowrap;
 	    overflow:hidden;text-overflow:ellipsis;max-width:100%;margin-top:1px;}
 	  .name-full:empty{display:none;}
+	  .basketball-bonus{display:none;flex-shrink:0;background:var(--gold);color:#1a1400;
+	    border:1px solid rgba(0,0,0,.3);padding:4px 8px;font-family:var(--display);
+	    font-weight:800;font-size:12px;line-height:1;letter-spacing:.7px;text-transform:uppercase;
+	    white-space:nowrap;}
+	  .basketball-bonus.show{display:block;}
+	  .crest-stack{display:flex;flex-direction:column;align-items:center;justify-content:center;
+	    gap:5px;flex-shrink:0;}
 	  .set-point-badge{position:absolute;bottom:-30px;background:var(--gold);color:#1a1400;
 	    font-family:var(--display);font-weight:800;font-size:14px;letter-spacing:2px;
 	    text-transform:uppercase;padding:4px 10px;line-height:1;border:1px solid rgba(0,0,0,0.28);
@@ -111,14 +118,50 @@
   .score-sm{font-family:var(--display);font-weight:800;font-size:44px;color:var(--white);min-width:56px;text-align:center;}
   .score-sm.flash{animation:pop .5s ease;}
   .score-flash{position:absolute;top:-38px;left:50%;transform:translateX(-50%) scale(0.6);opacity:0;
-    font-family:var(--display);font-weight:800;font-size:26px;color:var(--flash-fill,var(--gold));
-    -webkit-text-stroke:0.75px var(--flash-outline,#000);
+    font-family:var(--display);font-weight:800;font-size:26px;color:#fff;
+    -webkit-text-stroke:0.75px #fff;
     text-shadow:0 2px 8px rgba(0,0,0,0.6);
     pointer-events:none;white-space:nowrap;}
   .score-flash.show{animation:rise 1.6s ease forwards;}
   .sub-stat{font-family:var(--body);font-weight:600;font-size:12px;color:rgba(255,255,255,0.6);
     letter-spacing:1px;text-transform:uppercase;margin-top:-4px;display:none;}
   .sub-stat.show{display:block;}
+  /* Basketball uses the horizontal space on either side of the score for
+     team fouls and timeouts. Keeping these in their own rail lets the score
+     grow without stacking more text underneath it or making the bug taller. */
+  /* Wide enough for the "FOULS" label next to a two-digit men's count. */
+  .basketball-stat-rail{display:none;width:96px;flex-shrink:0;align-self:stretch;
+    flex-direction:column;justify-content:center;gap:6px;padding:0 12px;}
+  .basketball-stat-rail.home{border-right:1px solid var(--line);}
+  .basketball-stat-rail.away{border-left:1px solid var(--line);}
+  .basketball-stat-rail.show{display:flex;}
+  /* Fixed label/value columns so FOULS and TO rows line up exactly: every
+     value is centered in the same-width slot, with tabular digits, and both
+     rows center vertically instead of aligning mismatched font baselines. */
+  .basketball-stat{display:grid;grid-template-columns:1fr 24px;align-items:center;column-gap:6px;}
+  .basketball-stat-label{font-family:var(--body);font-weight:700;font-size:10px;line-height:1;
+    letter-spacing:1px;color:rgba(255,255,255,.52);text-transform:uppercase;}
+  .basketball-stat-value{font-family:var(--display);font-weight:800;font-size:19px;
+    line-height:1;color:var(--white);text-align:center;font-variant-numeric:tabular-nums;}
+  .stage.basketball .team{gap:17px;padding-top:8px;padding-bottom:8px;}
+  .stage.basketball .team.home.flush-inner{padding-right:28px;}
+  .stage.basketball .team.away.flush-inner{padding-left:28px;}
+  .stage.basketball .score-sm{font-size:60px;line-height:.92;min-width:72px;}
+  /* The logo column is an explicit two-row grid, including a fixed-size
+     badge slot. A blank bonus state therefore takes up exactly the same
+     width and height as BONUS or DOUBLE BONUS and can never shift one side
+     of the scorebug independently of the other. */
+  .stage.basketball .crest-stack{width:104px;min-height:83px;display:grid;
+    grid-template-rows:56px 22px;gap:5px;justify-items:center;align-items:center;}
+  .stage.basketball .basketball-bonus{display:block;visibility:hidden;
+    box-sizing:border-box;width:104px;height:22px;padding:4px 3px;text-align:center;}
+  .stage.basketball .basketball-bonus.show{visibility:visible;}
+  /* Reserve the second name line on both sides, even when a team has no
+     full name. That keeps the crests, abbreviations, and scores mirrored. */
+  .stage.basketball .name-col{justify-content:center;min-height:50px;}
+  .stage.basketball .name-full:empty{display:block;min-height:15px;}
+  .stage.basketball .period-strip{padding:7px 0;}
+  .stage.basketball .period-strip span{font-weight:700;color:rgba(255,255,255,.82);}
   @keyframes pop{0%{transform:scale(1);color:var(--gold);}40%{transform:scale(1.35);color:var(--gold);}100%{transform:scale(1);color:var(--white);}}
   .center-sm{background:var(--center-bg);display:flex;flex-direction:column;align-items:center;justify-content:center;
     padding:6px 26px;position:relative;z-index:2;min-width:140px;}
@@ -283,6 +326,13 @@
   .compact-break .vb-recap-event,.compact-break .vb-recap-sub{display:none;}
   .compact-break .vb-table{padding-right:170px;}
   .compact-break .vb-header-row,.compact-break .vb-team-row{grid-template-columns:230px 70px repeat(5,66px);}
+  /* Timeouts-left column: only on the compact Timeout card, where it
+     matters (Set Break always means a fresh 2 each). display:none cells
+     take no grid slot, so the other layouts are unchanged. */
+  .vb-col-to{display:none;}
+  .compact-break.show-timeouts .vb-col-to{display:block;}
+  .compact-break.show-timeouts .vb-header-row,.compact-break.show-timeouts .vb-team-row{
+    grid-template-columns:230px 70px 70px repeat(5,66px);}
   .compact-break .vb-header-row{padding-bottom:6px;}
   .compact-break .vb-team-row{padding:7px 0;}
   .compact-break .vb-col-team{gap:10px;}
@@ -293,7 +343,7 @@
   .compact-break .vb-set-num{font-size:23px;}
   .compact-break .vb-header-label{font-size:10px;letter-spacing:1px;}
   .compact-break .vb-recap-timer-wrap{position:absolute;right:24px;top:50%;transform:translateY(-50%);
-    width:130px;margin:0;padding-left:22px;border-left:1px solid var(--line);}
+    width:130px;margin:0;padding-left:22px;}
   .compact-break .back-in{margin:0;font-size:11px;letter-spacing:1.5px;}
   .compact-break .timer{font-size:42px;line-height:1;margin-top:6px;}
   /* Match Final — takes over the same slot below the table when the
@@ -308,6 +358,42 @@
   .vb-final-tally{font-family:var(--display);font-weight:800;font-size:64px;color:var(--white);
     margin-top:2px;line-height:1;}
 
+  /* ---------- BASKETBALL TIMEOUT ----------
+     Mirrors volleyball's compact top-of-screen break card, but uses the
+     basketball data we actually track and deliberately has no clock. */
+  #scene-basketball-timeout .card{top:46px;width:1320px;padding:16px 24px;
+    align-items:stretch;transform:translate(-50%,-12px) scale(.96);}
+  #scene-basketball-timeout.active .card{transform:translate(-50%,0) scale(1);}
+  .bb-timeout-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+  .bb-timeout-tag{font-family:var(--display);font-weight:700;font-size:14px;letter-spacing:4px;
+    color:var(--gold);text-transform:uppercase;}
+  .bb-timeout-period{font-family:var(--body);font-weight:700;font-size:11px;letter-spacing:2px;
+    color:rgba(255,255,255,.56);text-transform:uppercase;}
+  .bb-timeout-table{display:flex;flex-direction:column;width:100%;}
+  .bb-timeout-header,.bb-timeout-row{display:grid;
+    grid-template-columns:minmax(360px,1fr) 140px 140px 170px 230px;
+    align-items:center;width:100%;}
+  .bb-timeout-header{padding-bottom:6px;border-bottom:1px solid var(--line);}
+  .bb-timeout-header > div,.bb-timeout-row > div{text-align:center;}
+  .bb-timeout-header > div:first-child,.bb-timeout-row > div:first-child{text-align:left;}
+  .bb-timeout-heading{font-family:var(--body);font-weight:600;font-size:10px;
+    color:rgba(255,255,255,.45);letter-spacing:1.5px;text-transform:uppercase;}
+  .bb-timeout-row{padding:7px 0;border-bottom:1px solid var(--line);}
+  .bb-timeout-team{display:flex;align-items:center;gap:10px;min-width:0;}
+  .bb-timeout-crest{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;
+    justify-content:center;font-family:var(--display);font-weight:800;font-size:15px;color:var(--white);
+    border:1px solid var(--line);flex-shrink:0;overflow:hidden;}
+  .bb-timeout-row.home .bb-timeout-crest{background:var(--home-color);}
+  .bb-timeout-row.away .bb-timeout-crest{background:var(--away-color);}
+  .bb-timeout-name{font-family:var(--display);font-weight:800;font-size:19px;color:var(--white);
+    text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .bb-timeout-value{font-family:var(--display);font-weight:800;font-size:28px;color:var(--white);}
+  .bb-timeout-status{display:inline-block;min-width:112px;box-sizing:border-box;padding:4px 9px;
+    font-family:var(--display);font-weight:800;font-size:13px;line-height:1;letter-spacing:.8px;
+    color:rgba(255,255,255,.35);text-transform:uppercase;}
+  .bb-timeout-status.active{background:var(--gold);color:#1a1400;
+    border:1px solid rgba(0,0,0,.3);}
+
   /* ---------- COMMENTATOR / GUEST BUGS ----------
      Bottom-corner "now on air" bugs, siblings of .scene (not inside any one
      scene) so they show over whichever scene is live. Same one-timeline-
@@ -316,12 +402,15 @@
      restarted via the remove-class/reflow/add-class trick (see flashBug()).
      render() only ever writes text into these — it must never touch .show,
      so a STATE broadcast (constant) can't interrupt/reset a running bug. */
-  .corner-bug{position:absolute;bottom:48px;display:flex;flex-direction:column;
+  /* --bug-x/--bug-y are the operator's saved offsets (positive y = down).
+     They shift the anchor rather than using transform, which the slide-in
+     animation owns. */
+  .corner-bug{position:absolute;bottom:calc(48px - var(--bug-y, 0px));display:flex;flex-direction:column;
     background:var(--panel-alpha);border:3px solid var(--home-color);
     padding:12px 22px;filter:drop-shadow(0 12px 30px rgba(0,0,0,0.45));
     opacity:0;pointer-events:none;z-index:5;max-width:360px;}
-  #commentatorBug{left:48px;clip-path:polygon(0 0,100% 0,100% 100%,12px 100%,0 calc(100% - 12px));}
-  #guestBug{right:48px;border-color:var(--gold);
+  #commentatorBug{left:calc(48px + var(--bug-x, 0px));clip-path:polygon(0 0,100% 0,100% 100%,12px 100%,0 calc(100% - 12px));}
+  #guestBug{right:calc(48px - var(--bug-x, 0px));border-color:var(--gold);
     clip-path:polygon(0 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%);}
   .bug-eyebrow{font-family:var(--display);font-weight:700;font-size:13px;letter-spacing:4px;
     color:var(--gold);text-transform:uppercase;margin-bottom:4px;}
@@ -384,7 +473,14 @@
       <div class="bug-row">
         <div class="team home">
           <div class="stripe"></div>
-          <div class="crest-sm" id="homeCrest">H</div>
+          <div class="basketball-stat-rail home" id="homeBasketballStats">
+            <div class="basketball-stat"><span class="basketball-stat-label">Fouls</span><strong class="basketball-stat-value" id="homeBasketballFouls">0</strong></div>
+            <div class="basketball-stat"><span class="basketball-stat-label">TO</span><strong class="basketball-stat-value" id="homeBasketballTimeouts">4</strong></div>
+          </div>
+	          <div class="crest-stack">
+	            <div class="crest-sm" id="homeCrest">H</div>
+	            <div class="basketball-bonus" id="homeBasketballBonus"></div>
+	          </div>
 	          <div class="name-col">
 	            <div class="name-wrap"><div class="serve-dot" id="homeServe"></div><div class="name-sm" id="homeName">HOME</div></div>
 	            <div class="name-full" id="homeFullName"></div>
@@ -418,7 +514,14 @@
 	            <div class="name-full" id="awayFullName"></div>
 	          </div>
 	          <div class="set-point-badge" id="awaySetPointBadge">Set Point</div>
-	          <div class="crest-sm" id="awayCrest">A</div>
+	          <div class="crest-stack">
+	            <div class="crest-sm" id="awayCrest">A</div>
+	            <div class="basketball-bonus" id="awayBasketballBonus"></div>
+	          </div>
+          <div class="basketball-stat-rail away" id="awayBasketballStats">
+            <div class="basketball-stat"><span class="basketball-stat-label">Fouls</span><strong class="basketball-stat-value" id="awayBasketballFouls">0</strong></div>
+            <div class="basketball-stat"><span class="basketball-stat-label">TO</span><strong class="basketball-stat-value" id="awayBasketballTimeouts">4</strong></div>
+          </div>
           <div class="stripe"></div>
         </div>
       </div>
@@ -481,6 +584,7 @@
         <div class="vb-header-row">
           <div class="vb-col-team"></div>
           <div><span class="vb-header-label">Sets</span></div>
+          <div class="vb-col-to"><span class="vb-header-label">TO Left</span></div>
           <div><span class="vb-header-label">Set 1</span></div>
           <div><span class="vb-header-label">Set 2</span></div>
           <div><span class="vb-header-label">Set 3</span></div>
@@ -496,6 +600,7 @@
             </div>
           </div>
           <div><span class="vb-overall-num" id="vbHomeOverall">0</span></div>
+          <div class="vb-col-to"><span class="vb-set-num" id="vbHomeTimeouts">2</span></div>
           <div><span class="vb-set-num" id="vbHomeSet1">–</span></div>
           <div><span class="vb-set-num" id="vbHomeSet2">–</span></div>
           <div><span class="vb-set-num" id="vbHomeSet3">–</span></div>
@@ -511,6 +616,7 @@
             </div>
           </div>
           <div><span class="vb-overall-num" id="vbAwayOverall">0</span></div>
+          <div class="vb-col-to"><span class="vb-set-num" id="vbAwayTimeouts">2</span></div>
           <div><span class="vb-set-num" id="vbAwaySet1">–</span></div>
           <div><span class="vb-set-num" id="vbAwaySet2">–</span></div>
           <div><span class="vb-set-num" id="vbAwaySet3">–</span></div>
@@ -525,6 +631,44 @@
       <div class="vb-final-banner" id="vbFinalBanner">
         <div class="vb-final-winner" id="vbFinalWinner">EAC WINS</div>
         <div class="vb-final-tally" id="vbFinalTally">3–1</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="scene" id="scene-basketball-timeout">
+    <div class="card">
+      <div class="bb-timeout-top">
+        <div class="bb-timeout-tag" id="bbTimeoutTag">Timeout</div>
+        <div class="bb-timeout-period" id="bbTimeoutPeriod">1st Half</div>
+      </div>
+      <div class="bb-timeout-table">
+        <div class="bb-timeout-header">
+          <div></div>
+          <div class="bb-timeout-heading">Score</div>
+          <div class="bb-timeout-heading">Team Fouls</div>
+          <div class="bb-timeout-heading">Timeouts Left</div>
+          <div class="bb-timeout-heading">Bonus Status</div>
+        </div>
+        <div class="bb-timeout-row home">
+          <div class="bb-timeout-team">
+            <div class="bb-timeout-crest" id="bbTimeoutHomeCrest">H</div>
+            <div class="bb-timeout-name" id="bbTimeoutHomeName">HOME</div>
+          </div>
+          <div class="bb-timeout-value" id="bbTimeoutHomeScore">0</div>
+          <div class="bb-timeout-value" id="bbTimeoutHomeFouls">0</div>
+          <div class="bb-timeout-value" id="bbTimeoutHomeTimeouts">5</div>
+          <div><span class="bb-timeout-status" id="bbTimeoutHomeBonus">—</span></div>
+        </div>
+        <div class="bb-timeout-row away">
+          <div class="bb-timeout-team">
+            <div class="bb-timeout-crest" id="bbTimeoutAwayCrest">A</div>
+            <div class="bb-timeout-name" id="bbTimeoutAwayName">AWAY</div>
+          </div>
+          <div class="bb-timeout-value" id="bbTimeoutAwayScore">0</div>
+          <div class="bb-timeout-value" id="bbTimeoutAwayFouls">0</div>
+          <div class="bb-timeout-value" id="bbTimeoutAwayTimeouts">5</div>
+          <div><span class="bb-timeout-status" id="bbTimeoutAwayBonus">—</span></div>
+        </div>
       </div>
     </div>
   </div>
@@ -607,18 +751,13 @@
   fitToViewport();
   window.addEventListener('resize', fitToViewport);
 
-  const SCENES = ['scorebug','matchup','halftime','vb-recap','water','final'];
+  const SCENES = ['scorebug','matchup','halftime','vb-recap','basketball-timeout','water','final'];
   const KICKOFF_LABELS = { soccer:'Kickoff', basketball:'Tip-off', volleyball:'First Serve', baseball:'First Pitch', softball:'First Pitch' };
   const HALFTIME_TITLES = { soccer:'Halftime', basketball:'Halftime', volleyball:'Set Break', baseball:'Inning Break', softball:'Inning Break' };
 
   function applyTeamColors(s){
     document.documentElement.style.setProperty('--home-color', s.homeColor);
     document.documentElement.style.setProperty('--away-color', s.awayColor);
-  }
-
-  function setScoreFlashStyle(el, fill, outline){
-    el.style.setProperty('--flash-fill', fill || '#D4AF37');
-    el.style.setProperty('--flash-outline', outline || '#000000');
   }
 
   // The control panel's Scorebug Layout editor embeds this page in an
@@ -638,7 +777,12 @@
   // only an actual tap of "Final" shows the final treatment.
   function setMode(mode, sport){
     const vbRecapModes = mode === 'halftime' || mode === 'timeout' || mode === 'final';
-    const activeName = FORCED_PREVIEW_SCENE || ((vbRecapModes && sport === 'volleyball') ? 'vb-recap' : mode);
+    // Basketball gets its own compact top-of-screen timeout card; it is not
+    // the bottom scorebug and intentionally contains no countdown.
+    const compactBasketballTimeout = sport === 'basketball' && (mode === 'timeout' || mode === 'quarterbreak');
+    const activeName = FORCED_PREVIEW_SCENE || ((vbRecapModes && sport === 'volleyball')
+      ? 'vb-recap'
+      : (compactBasketballTimeout ? 'basketball-timeout' : mode));
     SCENES.forEach(name => {
       document.getElementById('scene-' + name).classList.toggle('active', name === activeName);
     });
@@ -672,12 +816,68 @@
 
   function periodLabel(s){
     switch(s.sport){
-      case 'basketball': return s.quarter;
+      case 'basketball': return s.quarter.toUpperCase();
       case 'volleyball': return 'SET ' + s.volleyballSet;
       case 'baseball':
       case 'softball': return s.inningHalf.toUpperCase() + ' ' + ordinal(s.inning).toUpperCase();
       default: return s.half.toUpperCase();
     }
+  }
+
+  // A team's bonus status is determined by the other team's foul count.
+  // Men's college: bonus at 7, double bonus at 10. Women's college: bonus
+  // at 5, with the team-foul counter capped there by the server.
+  function basketballBonusLabel(s, side){
+    const opponent = side === 'home' ? 'away' : 'home';
+    const opponentFouls = Number(s.fouls[opponent]) || 0;
+    if(s.basketballGameType === 'mens'){
+      if(opponentFouls >= 10) return 'Double Bonus';
+      if(opponentFouls >= 7) return 'Bonus';
+      return '';
+    }
+    return opponentFouls >= 5 ? 'Bonus' : '';
+  }
+
+  const QUARTER_BREAK_TAGS = {
+    Q1:'End of 1st Quarter', Q2:'End of 2nd Quarter', Q3:'End of 3rd Quarter',
+    Q4:'End of Regulation', OT:'End of Overtime'
+  };
+
+  // The same compact card serves Timeout (tagged with who called it) and
+  // women's Quarter Break (tagged with the quarter that just ended).
+  function basketballCardTag(s){
+    if(s.mode === 'quarterbreak') return QUARTER_BREAK_TAGS[s.quarter] || 'Quarter Break';
+    return timeoutTag(s);
+  }
+
+  // Shared by the basketball and volleyball timeout cards.
+  function timeoutTag(s){
+    if(s.timeoutCaller === 'media') return 'Media Timeout';
+    if(s.timeoutCaller === 'home' || s.timeoutCaller === 'away') return s[s.timeoutCaller] + ' Timeout';
+    return 'Timeout';
+  }
+
+  function renderBasketballTimeout(s){
+    document.getElementById('bbTimeoutTag').textContent = basketballCardTag(s);
+    // The quarter-break tag already names the period, so skip the repeat.
+    document.getElementById('bbTimeoutPeriod').textContent = s.mode === 'quarterbreak' ? '' : periodLabel(s);
+    ['home', 'away'].forEach(side => {
+      const title = side[0].toUpperCase() + side.slice(1);
+      const name = s[side] || title.toUpperCase();
+      setCrest(
+        document.getElementById('bbTimeout' + title + 'Crest'),
+        s[side + 'Logo'], name.slice(0,1), s[side + 'Color'], s[side + 'LogoBg']
+      );
+      document.getElementById('bbTimeout' + title + 'Name').textContent = name;
+      document.getElementById('bbTimeout' + title + 'Score').textContent =
+        side === 'home' ? s.homeScore : s.awayScore;
+      document.getElementById('bbTimeout' + title + 'Fouls').textContent = s.fouls[side];
+      document.getElementById('bbTimeout' + title + 'Timeouts').textContent = s.timeouts[side];
+      const bonus = basketballBonusLabel(s, side);
+      const status = document.getElementById('bbTimeout' + title + 'Bonus');
+      status.textContent = bonus || '—';
+      status.classList.toggle('active', !!bonus);
+    });
   }
 
   function volleyballSetPointSide(s){
@@ -725,7 +925,11 @@
     const isCompactBreak = s.mode === 'halftime' || s.mode === 'timeout';
 
     document.getElementById('vbRecapTag').textContent =
-      isFinal ? 'FINAL' : (s.mode === 'timeout' ? 'TIMEOUT' : 'SET BREAK');
+      isFinal ? 'FINAL' : (s.mode === 'timeout' ? timeoutTag(s).toUpperCase() : 'SET BREAK');
+    const vbTimeouts = s.volleyballTimeouts || { home: 2, away: 2 };
+    document.getElementById('vbRecapCard').classList.toggle('show-timeouts', s.mode === 'timeout');
+    document.getElementById('vbHomeTimeouts').textContent = vbTimeouts.home;
+    document.getElementById('vbAwayTimeouts').textContent = vbTimeouts.away;
     document.getElementById('vbRecapEvent').textContent = s.event;
     document.getElementById('vbRecapSub').textContent = s.league;
     document.getElementById('vbRecapTimerWrap').classList.toggle('hide', isFinal);
@@ -772,10 +976,9 @@
   function render(s){
     applyTeamColors(s);
     setMode(s.mode, s.sport);
+    renderBasketballTimeout(s);
     document.getElementById('homeFlash').classList.toggle('pos-bottom', s.scoreFlashPosition === 'bottom');
     document.getElementById('awayFlash').classList.toggle('pos-bottom', s.scoreFlashPosition === 'bottom');
-    setScoreFlashStyle(document.getElementById('homeFlash'), s.homeScoreFlashColor, s.homeScoreFlashOutline);
-    setScoreFlashStyle(document.getElementById('awayFlash'), s.awayScoreFlashColor, s.awayScoreFlashOutline);
 
     document.getElementById('homeName').textContent = s.home;
     document.getElementById('awayName').textContent = s.away;
@@ -793,6 +996,7 @@
     // softball are unaffected and keep showing their period info via the
     // center column exactly as before.
     const flushMode = s.sport === 'soccer' || s.sport === 'basketball';
+    document.querySelector('.stage').classList.toggle('basketball', s.sport === 'basketball');
     document.getElementById('centerSm').classList.toggle('eliminated', flushMode);
     document.querySelector('.team.home').classList.toggle('flush-inner', flushMode);
     document.querySelector('.team.away').classList.toggle('flush-inner', flushMode);
@@ -816,17 +1020,28 @@
 	    extra.classList.remove('show');
 	    document.getElementById('homeSetPointBadge').classList.remove('show');
 	    document.getElementById('awaySetPointBadge').classList.remove('show');
+    document.getElementById('homeBasketballStats').classList.remove('show');
+    document.getElementById('awayBasketballStats').classList.remove('show');
+    document.getElementById('homeBasketballBonus').classList.remove('show');
+    document.getElementById('awayBasketballBonus').classList.remove('show');
     document.getElementById('homeServe').classList.remove('show');
     document.getElementById('awayServe').classList.remove('show');
     document.getElementById('vbBoxRow').classList.remove('show');
     document.getElementById('miniDiamond').classList.remove('show');
 
     if(s.sport === 'basketball'){
-      homeSub.textContent = s.fouls.home + ' PF';
-      awaySub.textContent = s.fouls.away + ' PF';
-      homeSub.classList.add('show'); awaySub.classList.add('show');
-      extra.textContent = 'TO ' + s.timeouts.home + '-' + s.timeouts.away;
-      extra.classList.add('show');
+      document.getElementById('homeBasketballFouls').textContent = s.fouls.home;
+      document.getElementById('awayBasketballFouls').textContent = s.fouls.away;
+      document.getElementById('homeBasketballTimeouts').textContent = s.timeouts.home;
+      document.getElementById('awayBasketballTimeouts').textContent = s.timeouts.away;
+      document.getElementById('homeBasketballStats').classList.add('show');
+      document.getElementById('awayBasketballStats').classList.add('show');
+      ['home', 'away'].forEach(side => {
+        const bonus = basketballBonusLabel(s, side);
+        const badge = document.getElementById(side + 'BasketballBonus');
+        badge.textContent = bonus;
+        badge.classList.toggle('show', !!bonus);
+      });
 	    } else if(s.sport === 'volleyball'){
 	      extra.textContent = 'SETS ' + s.setsWon.home + '-' + s.setsWon.away;
 	      extra.classList.add('show');
@@ -860,7 +1075,7 @@
     document.getElementById('kickoffLabel').textContent = KICKOFF_LABELS[s.sport];
     document.getElementById('kickoffTime').textContent = s.kickoff;
 
-    document.getElementById('htTitle').textContent = HALFTIME_TITLES[s.sport];
+    document.getElementById('htTitle').textContent = s.mode === 'timeout' ? 'Timeout' : HALFTIME_TITLES[s.sport];
     document.getElementById('htEvent').textContent = s.event;
     document.getElementById('htHomeName').textContent = s.home;
     document.getElementById('htAwayName').textContent = s.away;
@@ -898,6 +1113,15 @@
     renderVbRecap(s);
     applyScorebugLayout(s.scorebugLayout || { x: 0, y: 0, scale: 1 });
     applyChallengeBugLayout(s.challengeBugLayout || { x: 0, y: 0 });
+    applyCornerBugLayout('commentatorBug', s.commentatorBugLayout);
+    applyCornerBugLayout('guestBug', s.guestBugLayout);
+  }
+
+  function applyCornerBugLayout(id, layout){
+    const el = document.getElementById(id);
+    const safe = Object.assign({ x: 0, y: 0 }, layout || {});
+    el.style.setProperty('--bug-x', safe.x + 'px');
+    el.style.setProperty('--bug-y', safe.y + 'px');
   }
 
   function applyScorebugLayout(layout){
@@ -971,6 +1195,10 @@
   setInterval(() => { if(latestState){ renderTimer(latestState); } }, 250);
 
   // ---- WebSocket connection to the shared backend ----
+  // A different boot id after a reconnect means the server restarted, most
+  // likely with updated files — reload so the overlay picks them up.
+  let serverBootId = null;
+
   function connect(){
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
     const ws = new WebSocket(`${proto}//${location.host}`);
@@ -980,6 +1208,10 @@
 
     ws.onmessage = (msg) => {
       const data = JSON.parse(msg.data);
+      if(data.type === 'HELLO'){
+        if(serverBootId && serverBootId !== data.bootId){ location.reload(); return; }
+        serverBootId = data.bootId;
+      }
       if(data.type === 'STATE'){ latestState = data.state; render(data.state); }
       if(data.type === 'EVENT' && data.event.type === 'SCORE'){ flashGoal(data.event.side, data.event.delta); }
       if(data.type === 'EVENT' && data.event.type === 'COMMENTATOR_BUG'){ flashBug('commentatorBug'); }

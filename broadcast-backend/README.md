@@ -65,14 +65,16 @@ buttons instead of (or alongside) the touch control panel.
 - **Scene**: off / scorebug / matchup / halftime / timeout / water break / final (defaults to scorebug on startup)
 - **Score, period/half/quarter/set label**. Soccer and basketball have no game clock — the scorebug always
   shows the two team panels flush together with a half/quarter strip underneath.
-- **Halftime/intermission countdown** with sport-specific behavior. For volleyball, Set Break starts 3:00 and Timeout starts 1:15 automatically.
-- **Scorebug layout & positioning**: adjustable per-sport, with a draggable challenge-bug position control
-- **Score flash animation**: toggle between top and bottom position (defaults to bottom), with editable home/away fill and outline colors
+- **Halftime/intermission countdown** with sport-specific behavior. Volleyball Set Break starts at 3:00 and Timeout at 1:15.
+- **Basketball timeouts and quarter breaks**: Home / Away / Media Timeout buttons put a compact top-of-screen stats card (score, team fouls, timeouts left, bonus status, and period) on air without a countdown, labeled with who called it. Home/Away Timeout also subtracts one of that team's timeouts (tapping the same button again while it is on air does not charge a second). Women's games also get a **Quarter Break** button that shows the same card tagged "End of 1st Quarter", etc.
+- **Scorebug layout & positioning**: adjustable per-sport with mouse, stylus, or captured touch dragging, plus a draggable challenge-bug position control
+- **Score flash animation**: toggle between top and bottom position (defaults to bottom), with a fixed white fill and outline
 - **Team names, colors, league/event text, kickoff/tip-off time**
 - **Sport-specific stats**:
   - Soccer: half (1st/2nd)
-  - Basketball: quarter, fouls, timeouts
-  - Volleyball: sets, serving side, box score per set, and a match-ending button when a team with 2 sets won is at match point
+  - Basketball: women’s quarters or men’s halves (switching format asks for confirmation), team fouls (not personal fouls; women’s count stops at 5), 4 timeouts per team, automatic men’s bonus/double-bonus and women’s bonus indicators. Team fouls reset automatically when moving forward to a new quarter (women’s) or half (men’s), but carry into OT; a manual reset button remains for corrections.
+  - Direct number entry: tap the live score (all sports), basketball foul count, or basketball timeout count to type a correction instead of repeatedly using +/-
+  - Volleyball: sets, serving side, box score per set, and a match-ending button when a team with 2 sets won is at match point. 2 team timeouts per set (reset on a new set); Home/Away Timeout buttons under each count subtract one, start the 1:15 clock, and show "<TEAM> TIMEOUT" with a TO Left column on the compact card
   - Baseball/Softball: inning, count (balls/strikes/outs), baserunners
 - **On-air bugs**: commentator/guest lower-third bugs and basketball/volleyball challenge review bug
 
@@ -102,8 +104,10 @@ itself is an entry in `teams.json`, so it can be put on either side.
   image into `public/logos/`, add a matching entry to `teams.json`, and it
   shows up in both the "Home Team" and "Away Team" dropdowns. Selecting a
   team auto-fills that side's abbreviation/full name/color/logo and locks
-  the name fields; pick "Custom / Other…" to type in a team that isn't in
-  the list yet. **⇄ Swap Home / Away** flips everything between the two
+  the name fields; pick **Custom Team** on either side to enter
+  a short on-air name and full team name for a tournament opponent that is
+  not in the roster. Custom teams clear the roster logo and use the selected
+  team color with the short name's first letter instead. **⇄ Swap Home / Away** flips everything between the two
   sides. Roster picks and swaps only go on air when you hit Save Team Info.
 
   Notes on specific entries:

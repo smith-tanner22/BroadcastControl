@@ -12,6 +12,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const VOLLEYBALL_BETWEEN_SETS_SECONDS = 180;
 const VOLLEYBALL_TIMEOUT_SECONDS = 75;
+const VOLLEYBALL_TIMEOUTS_PER_SET = 2;
 
 // Fallback timer length when a non-volleyball intermission scene is cut to.
 // Volleyball is explicit: Set Break is always 3:00, Timeout is always 1:15.
@@ -60,12 +61,24 @@ const DEFAULT_STATE = {
   half: '1st Half',
 
   // Basketball
+  // Women's games use quarters; men's games use halves. Keep the selected
+  // game type in shared state so every control panel and overlay agrees on
+  // which period controls/label should be shown.
+  basketballGameType: 'womens', // womens | mens
   quarter: 'Q1',
+  // Team fouls only (not personal fouls). Women's counts cap at 5 since the
+  // bonus is already reached there and nothing past it changes the penalty.
   fouls: { home: 0, away: 0 },
-  timeouts: { home: 5, away: 5 },
+  timeouts: { home: 4, away: 4 },
+  // Who called the timeout currently on air: home | away | media | null.
+  // Only meaningful while mode is 'timeout' in basketball.
+  timeoutCaller: null,
 
   // Volleyball
   volleyballSet: 1,
+  // Team timeouts left in the current set (NCAA/NJCAA: 2 per set, reset
+  // every set). Separate from basketball's per-game `timeouts`.
+  volleyballTimeouts: { home: 2, away: 2 },
   setsWon: { home: 0, away: 0 },
   servingSide: 'home',
   // Box score — final score for each *completed* set, keyed by set number
@@ -99,11 +112,11 @@ const DEFAULT_STATE = {
   // page's own edit mode. x/y are pixel offsets from the default centered
   // position; scale is a uniform multiplier. {0,0,1} reproduces the default.
   scoreFlashPosition: 'bottom',
-  homeScoreFlashColor: '#D4AF37',
-  homeScoreFlashOutline: '#000000',
-  awayScoreFlashColor: '#D4AF37',
-  awayScoreFlashOutline: '#000000',
   challengeBugLayout: { x: 0, y: 0 },
+  // Pixel offsets for the bottom-corner commentator/guest bugs from their
+  // default corners. Not sport-specific: the booth is the same every game.
+  commentatorBugLayout: { x: 0, y: 0 },
+  guestBugLayout: { x: 0, y: 0 },
   scorebugLayout: { x: 0, y: 0, scale: 1 },
   // Sport-specific default positions for the scorebug — saved separately per
   // sport so switching doesn't lose the customized position for that sport.
@@ -131,10 +144,41 @@ let saveTimer = null;
 
 function normalizeStateShape(s) {
   if (s.mode === 'break') s.mode = 'scorebug';
-  ['breakMode', 'breakTitle', 'sponsor', 'sponsorTag', 'footer', 'qr'].forEach((key) => {
+  [
+    'breakMode', 'breakTitle', 'sponsor', 'sponsorTag', 'footer', 'qr',
+    'homeScoreFlashColor', 'homeScoreFlashOutline', 'awayScoreFlashColor', 'awayScoreFlashOutline'
+  ].forEach((key) => {
     delete s[key];
   });
   const sports = ['soccer', 'basketball', 'volleyball', 'baseball', 'softball'];
+  // Existing saved games predate basketballGameType and only have `quarter`.
+  // Preserve those games as women's/quarters unless the saved period clearly
+  // contains a half label.
+  if (s.basketballGameType !== 'mens' && s.basketballGameType !== 'womens') {
+    s.basketballGameType = /half/i.test(String(s.quarter || '')) ? 'mens' : 'womens';
+  }
+  const validBasketballPeriods = s.basketballGameType === 'mens'
+    ? ['1st Half', '2nd Half', 'OT']
+    : ['Q1', 'Q2', 'Q3', 'Q4', 'OT'];
+  if (!validBasketballPeriods.includes(s.quarter)) {
+    s.quarter = s.basketballGameType === 'mens' ? '1st Half' : 'Q1';
+  }
+  s.fouls = Object.assign({ home: 0, away: 0 }, s.fouls || {});
+  s.timeouts = Object.assign({ home: 4, away: 4 }, s.timeouts || {});
+  if (!['home', 'away', 'media'].includes(s.timeoutCaller)) s.timeoutCaller = null;
+  s.volleyballTimeouts = Object.assign({ home: 2, away: 2 }, s.volleyballTimeouts || {});
+  ['home', 'away'].forEach((side) => {
+    s.volleyballTimeouts[side] = Math.min(2, Math.max(0, Math.round(Number(s.volleyballTimeouts[side]) || 0)));
+  });
+  // Quarter Break only exists for women's basketball.
+  if (s.mode === 'quarterbreak' && (s.sport !== 'basketball' || s.basketballGameType !== 'womens')) {
+    s.mode = 'scorebug';
+  }
+  const foulMax = s.basketballGameType === 'womens' ? 5 : 999;
+  ['home', 'away'].forEach((side) => {
+    s.fouls[side] = Math.min(foulMax, Math.max(0, Math.round(Number(s.fouls[side]) || 0)));
+    s.timeouts[side] = Math.min(999, Math.max(0, Math.round(Number(s.timeouts[side]) || 0)));
+  });
   if (!s.scorebugLayouts) s.scorebugLayouts = {};
   if (!s.challengeBugLayouts) s.challengeBugLayouts = {};
   sports.forEach((sport) => {
@@ -142,6 +186,8 @@ function normalizeStateShape(s) {
     s.challengeBugLayouts[sport] = Object.assign({ x: 0, y: 0 }, s.challengeBugLayouts[sport] || {});
   });
   s.challengeBugLayout = Object.assign({ x: 0, y: 0 }, s.challengeBugLayout || {});
+  s.commentatorBugLayout = Object.assign({ x: 0, y: 0 }, s.commentatorBugLayout || {});
+  s.guestBugLayout = Object.assign({ x: 0, y: 0 }, s.guestBugLayout || {});
   if (!Number.isFinite(Number(s.intermissionSelectedSeconds)) || Number(s.intermissionSelectedSeconds) <= 0) {
     s.intermissionSelectedSeconds = DEFAULT_INTERMISSION_SECONDS[s.sport] || 900;
   } else {
@@ -162,6 +208,9 @@ function loadState() {
     const raw = fs.readFileSync(STATE_FILE, 'utf8');
     const loaded = JSON.parse(raw);
     const merged = Object.assign(base, loaded);
+    if (!Object.prototype.hasOwnProperty.call(loaded, 'basketballGameType')) {
+      merged.basketballGameType = /half/i.test(String(loaded.quarter || '')) ? 'mens' : 'womens';
+    }
     return normalizeStateShape(merged);
   } catch (e) {
     console.warn('No valid saved state found, starting with defaults:', e.message);
@@ -249,6 +298,27 @@ function volleyballMatchClincher() {
   };
 }
 
+const BASKETBALL_PERIODS = {
+  womens: ['Q1', 'Q2', 'Q3', 'Q4', 'OT'],
+  mens: ['1st Half', '2nd Half', 'OT']
+};
+
+// Basketball Timeout and Quarter Break are compact, clockless stats cards.
+function isClocklessBasketballScene() {
+  return state.sport === 'basketball' && (state.mode === 'timeout' || state.mode === 'quarterbreak');
+}
+
+function clearIntermissionClock() {
+  state.halftimeEndsAt = null;
+  state.intermissionSelectedSeconds = null;
+}
+
+function countValue(value, max = 999) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return null;
+  return Math.min(max, Math.max(0, Math.round(number)));
+}
+
 // ---------------------------------------------------------------------------
 // Action reducer — every control-panel button press sends one of these.
 // ---------------------------------------------------------------------------
@@ -256,6 +326,12 @@ function applyAction(action) {
   switch (action.type) {
     case 'SET_SPORT':
       state.sport = action.sport;
+      // Quarter Break has no equivalent scene in other sports.
+      if (state.mode === 'quarterbreak' && action.sport !== 'basketball') state.mode = 'scorebug';
+      // If a control panel changes sports while Timeout is already the
+      // selected scene, do not carry a volleyball/intermission clock into
+      // basketball's deliberately clockless timeout card.
+      if (isClocklessBasketballScene()) clearIntermissionClock();
       // Load the sport-specific scorebug layout, or default if not set
 	      if (state.scorebugLayouts && state.scorebugLayouts[action.sport]) {
 	        state.scorebugLayout = Object.assign({}, state.scorebugLayouts[action.sport]);
@@ -267,10 +343,15 @@ function applyAction(action) {
 
     case 'SET_MODE':
       state.mode = action.mode === 'break' ? 'scorebug' : action.mode;
-      // Cutting to an intermission scene starts the clock automatically.
-      // Volleyball is intentionally simple: Set Break is always 3:00 and
-      // Timeout is always 1:15, with no preset arming in between.
-      if (action.mode === 'halftime' || action.mode === 'timeout') {
+      // A plain Timeout (no caller) only comes from volleyball or older
+      // control pages; basketball's caller buttons send BASKETBALL_TIMEOUT.
+      if (action.mode === 'timeout') state.timeoutCaller = null;
+      // Basketball Timeout/Quarter Break are compact, clockless stats cards.
+      // Clear a previously running halftime clock so no countdown remains
+      // associated with them. Other intermission scenes start automatically.
+      if (isClocklessBasketballScene()) {
+        clearIntermissionClock();
+      } else if (action.mode === 'halftime' || action.mode === 'timeout') {
         let seconds = DEFAULT_INTERMISSION_SECONDS[state.sport] || 900;
         if (state.sport === 'volleyball') {
           seconds = action.mode === 'timeout' ? VOLLEYBALL_TIMEOUT_SECONDS : VOLLEYBALL_BETWEEN_SETS_SECONDS;
@@ -288,6 +369,17 @@ function applyAction(action) {
         broadcastEvent({ type: 'SCORE', side: action.side, delta: action.delta });
         return;
       }
+      break;
+    }
+
+    // Direct entry is used when the operator taps a score and types the
+    // correct value. It intentionally does not trigger a score animation,
+    // since this path is primarily for setup and corrections.
+    case 'SET_SCORE': {
+      const value = countValue(action.value);
+      if (value === null || !['home', 'away'].includes(action.side)) break;
+      const key = action.side === 'home' ? 'homeScore' : 'awayScore';
+      state[key] = value;
       break;
     }
 
@@ -332,14 +424,15 @@ function applyAction(action) {
       if (sport === 'soccer') {
         state.half = '1st Half';
       } else if (sport === 'basketball') {
-        state.quarter = 'Q1';
+        state.quarter = state.basketballGameType === 'mens' ? '1st Half' : 'Q1';
         state.fouls = { home: 0, away: 0 };
-        state.timeouts = { home: 5, away: 5 };
+        state.timeouts = { home: 4, away: 4 };
       } else if (sport === 'volleyball') {
         state.volleyballSet = 1;
         state.setsWon = { home: 0, away: 0 };
         state.servingSide = 'home';
         state.volleyballSetScores = {};
+        state.volleyballTimeouts = { home: VOLLEYBALL_TIMEOUTS_PER_SET, away: VOLLEYBALL_TIMEOUTS_PER_SET };
         state.halftimeEndsAt = null;
       } else if (sport === 'baseball' || sport === 'softball') {
         state.inning = 1;
@@ -357,6 +450,10 @@ function applyAction(action) {
       break;
 
     case 'START_HALFTIME_TIMER':
+      if (isClocklessBasketballScene()) {
+        clearIntermissionClock();
+        break;
+      }
       state.halftimeEndsAt = Date.now() + action.seconds * 1000;
       // Remember the latest custom duration for non-volleyball intermission
       // scenes. Volleyball's Set Break/Timeout buttons override this.
@@ -364,6 +461,10 @@ function applyAction(action) {
       break;
 
     case 'SELECT_INTERMISSION_TIMER':
+      if (isClocklessBasketballScene()) {
+        clearIntermissionClock();
+        break;
+      }
       state.intermissionSelectedSeconds = Math.max(1, Math.round(action.seconds));
       // Compatibility for older control pages that still send preset picks.
       if (state.mode === 'halftime' || state.mode === 'timeout') {
@@ -379,22 +480,121 @@ function applyAction(action) {
       break;
 
     // ---------------- Basketball ----------------
+    case 'SET_BASKETBALL_GAME_TYPE':
+      if (action.gameType !== 'mens' && action.gameType !== 'womens') break;
+      // Re-selecting the current format must not knock the period back.
+      if (action.gameType === state.basketballGameType) break;
+      state.basketballGameType = action.gameType;
+      state.quarter = action.gameType === 'mens' ? '1st Half' : 'Q1';
+      if (action.gameType === 'womens') {
+        state.fouls.home = Math.min(5, state.fouls.home);
+        state.fouls.away = Math.min(5, state.fouls.away);
+      } else if (state.mode === 'quarterbreak') {
+        state.mode = 'scorebug';
+      }
+      break;
+
+    // Team fouls reset when the game moves forward into a new quarter
+    // (women's) or half (men's). Overtime keeps the previous period's fouls
+    // and bonus, and stepping backward to fix a mis-tap leaves fouls alone.
+    case 'SET_BASKETBALL_PERIOD': {
+      const periods = BASKETBALL_PERIODS[state.basketballGameType];
+      const next = periods.indexOf(action.period);
+      if (next === -1) break;
+      if (next > periods.indexOf(state.quarter) && action.period !== 'OT') {
+        state.fouls = { home: 0, away: 0 };
+      }
+      state.quarter = action.period;
+      break;
+    }
+
+    // One tap puts the Timeout card on air with who called it, and charges
+    // a team timeout. Basketball also has uncounted media timeouts and a
+    // clockless card; volleyball charges this set's timeouts and starts the
+    // standard 1:15 clock. Tapping the same caller again while it is already
+    // on air does not charge a second one.
+    case 'CALL_TIMEOUT':
+    case 'BASKETBALL_TIMEOUT': {
+      const caller = action.caller;
+      const callers = state.sport === 'basketball' ? ['home', 'away', 'media']
+        : state.sport === 'volleyball' ? ['home', 'away'] : [];
+      if (!callers.includes(caller)) break;
+      if (state.mode === 'timeout' && state.timeoutCaller === caller) break;
+      state.mode = 'timeout';
+      state.timeoutCaller = caller;
+      if (state.sport === 'basketball') {
+        if (caller !== 'media') state.timeouts[caller] = Math.max(0, state.timeouts[caller] - 1);
+        clearIntermissionClock();
+      } else {
+        state.volleyballTimeouts[caller] = Math.max(0, state.volleyballTimeouts[caller] - 1);
+        state.intermissionSelectedSeconds = VOLLEYBALL_TIMEOUT_SECONDS;
+        state.halftimeEndsAt = Date.now() + VOLLEYBALL_TIMEOUT_SECONDS * 1000;
+      }
+      break;
+    }
+
+    // Compatibility with control panels that were already open before this
+    // update. New panels send SET_BASKETBALL_PERIOD instead.
     case 'SET_QUARTER':
-      state.quarter = action.quarter;
+      if (['Q1', 'Q2', 'Q3', 'Q4', 'OT'].includes(action.quarter)) {
+        state.basketballGameType = 'womens';
+        state.quarter = action.quarter;
+      }
       break;
 
     case 'FOUL_DELTA':
-      state.fouls[action.side] = Math.max(0, state.fouls[action.side] + action.delta);
+      if (!['home', 'away'].includes(action.side)) break;
+      state.fouls[action.side] = Math.min(
+        state.basketballGameType === 'womens' ? 5 : 999,
+        Math.max(0, state.fouls[action.side] + action.delta)
+      );
+      break;
+
+    case 'SET_FOULS': {
+      const value = countValue(action.value, state.basketballGameType === 'womens' ? 5 : 999);
+      if (value === null || !['home', 'away'].includes(action.side)) break;
+      state.fouls[action.side] = value;
+      break;
+    }
+
+    case 'RESET_FOULS':
+      state.fouls = { home: 0, away: 0 };
       break;
 
     case 'TIMEOUT_DELTA':
+      if (!['home', 'away'].includes(action.side)) break;
       state.timeouts[action.side] = Math.max(0, state.timeouts[action.side] + action.delta);
       break;
 
+    case 'SET_TIMEOUTS': {
+      const value = countValue(action.value);
+      if (value === null || !['home', 'away'].includes(action.side)) break;
+      state.timeouts[action.side] = value;
+      break;
+    }
+
     // ---------------- Volleyball ----------------
+    // Timeouts are per set, so a new set number gives both teams a fresh 2.
     case 'SET_VOLLEYBALL_SET':
+      if (action.set !== state.volleyballSet) {
+        state.volleyballTimeouts = { home: VOLLEYBALL_TIMEOUTS_PER_SET, away: VOLLEYBALL_TIMEOUTS_PER_SET };
+      }
       state.volleyballSet = action.set;
       break;
+
+    case 'VB_TIMEOUT_DELTA':
+      if (!['home', 'away'].includes(action.side)) break;
+      state.volleyballTimeouts[action.side] = Math.min(
+        VOLLEYBALL_TIMEOUTS_PER_SET, Math.max(0, state.volleyballTimeouts[action.side] + action.delta)
+      );
+      break;
+
+    case 'SET_VB_TIMEOUTS': {
+      const value = countValue(action.value, VOLLEYBALL_TIMEOUTS_PER_SET);
+      if (value === null || !['home', 'away'].includes(action.side)) break;
+      state.volleyballTimeouts[action.side] = value;
+      break;
+    }
 
     case 'SETS_WON_DELTA':
       state.setsWon[action.side] = Math.max(0, state.setsWon[action.side] + action.delta);
@@ -416,6 +616,7 @@ function applyAction(action) {
       state.homeScore = 0;
       state.awayScore = 0;
       state.volleyballSet = Math.min(5, state.volleyballSet + 1);
+      state.volleyballTimeouts = { home: VOLLEYBALL_TIMEOUTS_PER_SET, away: VOLLEYBALL_TIMEOUTS_PER_SET };
       break;
     }
 
@@ -530,12 +731,27 @@ function applyAction(action) {
       state.challengeBugLayout = { x: 0, y: 0 };
       break;
 
+    // Commentator ("Lee Patterson") and guest corner bugs.
+    case 'SET_CORNER_BUG_LAYOUT': {
+      if (!['commentator', 'guest'].includes(action.bug)) break;
+      const x = Number(action.x), y = Number(action.y);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) break;
+      state[action.bug + 'BugLayout'] = { x, y };
+      break;
+    }
+
+    case 'RESET_CORNER_BUG_LAYOUT':
+      if (!['commentator', 'guest'].includes(action.bug)) break;
+      state[action.bug + 'BugLayout'] = { x: 0, y: 0 };
+      break;
+
     case 'SET_SCORE_FLASH_POSITION':
       state.scoreFlashPosition = action.position === 'bottom' ? 'bottom' : 'top';
       break;
 
     case 'UPDATE_SCORE_FLASH_STYLE':
-      Object.assign(state, action.data);
+      // Compatibility with older control pages. Flash fill/outline are now
+      // intentionally fixed to white in the overlay.
       break;
 
     case 'UPDATE_TEAMS':
@@ -576,7 +792,13 @@ function applyAction(action) {
   broadcastState();
 }
 
+// Changes on every server start. The overlay compares it across reconnects
+// and reloads itself after a restart, so an OBS browser source never keeps
+// running an outdated copy of overlay.html.
+const BOOT_ID = String(Date.now());
+
 wss.on('connection', (ws) => {
+  ws.send(JSON.stringify({ type: 'HELLO', bootId: BOOT_ID }));
   // send current state immediately so a freshly-opened overlay/control page
   // is in sync without waiting for the next change.
   ws.send(JSON.stringify({ type: 'STATE', state }));
